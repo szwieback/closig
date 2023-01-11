@@ -12,23 +12,23 @@ class CovModel():
         pass
 
     @abstractmethod
-    def _covariance_element(self, n0, n1):
+    def _covariance_element(self, n0, n1, displacement_phase=False):
         pass
 
-    def _coherence_element(self, n0, n1):
-        num = self._covariance_element(n0, n1)
+    def _coherence_element(self, n0, n1, displacement_phase=False):
+        num = self._covariance_element(n0, n1, displacement_phase=displacement_phase)
         denom = np.sqrt(self._covariance_element(n0, n0) * self._covariance_element(n1, n1))
         return num / denom
 
-    def covariance(self, N, coherence=False):
+    def covariance(self, N, coherence=False, displacement_phase=False):
         C = np.zeros((N, N), dtype=np.complex64)
         for n0 in range(N):
             C[n0, n0] = self._covariance_element(n0, n0)
             for n1 in range(n0 + 1, N):
                 if not coherence:
-                    C01 = self._covariance_element(n0, n1)
+                    C01 = self._covariance_element(n0, n1, displacement_phase=displacement_phase)
                 else:
-                    C01 = self._coherence_element(n0, n1)
+                    C01 = self._coherence_element(n0, n1, displacement_phase=displacement_phase)
                 C[n0, n1] = C01
                 C[n1, n0] = C01.conj()
         return C
@@ -46,13 +46,18 @@ class DiffDispTile(CovModel):
             coh0 = np.zeros_like(self.dcoh)
         self.coh0 = coh0
 
-    def _covariance_element(self, n0, n1):
+    def _covariance_element(self, n0, n1, displacement_phase=False):
         if n0 == n1:
             coh = 1
         else:
             coh = (self.dcoh) ** (abs(n1 - n0)) + self.coh0
-        cont = self.intens * coh * np.exp(1j * self.dphi * (n1 - n0))
-        return np.sum(cont)
+        if not displacement_phase:
+            cont = self.intens * coh * np.exp(1j * self.dphi * (n1 - n0))
+            C01 = np.sum(cont)
+        else:
+            phase = np.sum(self.intens * self.dphi * (n1 - n0)) / np.sum(self.intens)
+            C01 = np.sum(self.intens) * np.exp(1j * phase)
+        return C01
 
 class VegModel(CovModel):
     def __init__(
@@ -81,7 +86,7 @@ class VegModel(CovModel):
         else:
             return (dcoh) ** (abs(n1 - n0)) + cohi
 
-    def _covariance_element(self, n0, n1):
+    def _covariance_element(self, n0, n1, displacement_phase=False):
         k = 2 * np.pi / self.wavelength
         dn = self._draw_nr(n0) - self._draw_nr(n1)
         heff = h / np.cos(self.theta)
@@ -94,7 +99,9 @@ class VegModel(CovModel):
         cohc = self.__coherence(self.dcohc, self.cohic, n0, n1)
         C01g = self.Fg * cohg * np.exp(1j * phase_tot)
         C01c = self.fc * cohc * integral
-        return C01g + C01c
+        C01 = C01g + C01c
+        if displacement_phase: C01 = np.abs(C01) # nothing moves
+        return C01
 
 if __name__ == '__main__':
     N = 91
@@ -105,7 +112,7 @@ if __name__ == '__main__':
     model = DiffDispTile(intensities, [0.30, 0.30], [0.0, dphase], coh0=[0.6, 0.6])
     h, theta = 0.4, 30 * np.pi / 180
     model = VegModel(wavelength=0.2, h=h, Fg=0.5, fc=0.5 / h, Nyear=Nyear, nrstd=0.02, theta=theta)
-    C = model.covariance(N)
+    C = model.covariance(N, displacement_phase=True)
     from expansion import TwoHopBasis, SmallStepBasis
     b = SmallStepBasis(N)
     # b = TwoHopBasis(N)
