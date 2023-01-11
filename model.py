@@ -57,22 +57,23 @@ class DiffDispTile(CovModel):
 class VegModel(CovModel):
     def __init__(
             self, wavelength=0.2, h=0.4, Fg=0.5, fc=1.0, dcohg=0.7, dcohc=0.5, cohig=0.8, cohic=0.2,
-            ns=1.3, na=0.1, nstd=0.02, Nyear=30, seed=678):
+            nrm=1.40, nra=0.15, nrstd=0.02, Nyear=30, seed=678, theta=0.0):
         # Nyear: scenes per year
         self.wavelength = wavelength
         self.h = h
+        self.theta = theta
         self.Fg, self.fc = Fg, fc
         self.dcohg, self.dcohc = dcohg, dcohc
         self.cohig, self.cohic = cohig, cohic
-        self.nm, self.na, self.nstd = ns, na, nstd
+        self.nrm, self.nra, self.nrstd = nrm, nra, nrstd
         self.Nyear = Nyear
         self.seed = seed
 
-    def _draw_n(self, n0):
+    def _draw_nr(self, n0):
         rng = np.random.default_rng(self.seed + n0)
-        ntilde = rng.normal(0, self.nstd, 1)
-        n = self.nm + ntilde + self.na * np.cos(2 * np.pi * n0 / self.Nyear)
-        return float(n)
+        nrtilde = rng.normal(0, self.nrstd, 1)
+        nr = self.nrm + nrtilde + self.nra * np.cos(2 * np.pi * n0 / self.Nyear)
+        return float(nr)
 
     def __coherence(self, dcoh, cohi, n0, n1):
         if n0 == n1:
@@ -82,11 +83,11 @@ class VegModel(CovModel):
 
     def _covariance_element(self, n0, n1):
         k = 2 * np.pi / self.wavelength
-        dn = self._draw_n(n0) - self._draw_n(n1)
-        dn = dn * 1e-1
-        phase_tot = 2 * k * dn * self.h
+        dn = self._draw_nr(n0) - self._draw_nr(n1)
+        heff = h / np.cos(self.theta)
+        phase_tot = 2 * k * dn * heff
         if np.abs(phase_tot) < np.pi * 1e-6:
-            integral = self.h
+            integral = heff
         else:
             integral = (np.exp(1j * phase_tot) - 1) / (2j * k * dn)
         cohg = self.__coherence(self.dcohg, self.cohig, n0, n1)
@@ -102,8 +103,8 @@ if __name__ == '__main__':
     dphase = 2 * np.pi / Nyear
     intensities = [0.8, 0.2]
     model = DiffDispTile(intensities, [0.30, 0.30], [0.0, dphase], coh0=[0.6, 0.6])
-    h = 0.4
-    model = VegModel(wavelength=0.05, h=h, Fg=0.5, fc=0.5 / h, Nyear=Nyear, nstd=0.01, ns=1.40, na=0.15)
+    h, theta = 0.4, 30 * np.pi / 180
+    model = VegModel(wavelength=0.2, h=h, Fg=0.5, fc=0.5 / h, Nyear=Nyear, nrstd=0.02, theta=theta)
     C = model.covariance(N)
     from expansion import TwoHopBasis, SmallStepBasis
     b = SmallStepBasis(N)
@@ -115,11 +116,11 @@ if __name__ == '__main__':
     nt, ntau = b.nt, b.ntau
     fig, ax = plt.subplots(1, 1)
     osf = 4
-    ntr = np.arange(min(nt), max(nt), step=1/osf)
-    ntaur = np.arange(min(ntau), max(ntau), step=0.5/osf)
+    ntr = np.arange(min(nt), max(nt), step=1 / osf)
+    ntaur = np.arange(min(ntau), max(ntau), step=0.5 / osf)
 
     # closures2d = np.ones((len(ntr), len(ntaur)), dtype=closures.dtype) * np.nan
-    # for _jnt, _nt in enumerate(ntr):
+    # for _jnt, _nt   in enumerate(ntr):
     #     for _jntau, _ntau in enumerate(ntaur):
     #         jz = np.nonzero(np.logical_and(nt == _nt, ntau == _ntau))[0]
     #         try:
@@ -132,10 +133,10 @@ if __name__ == '__main__':
     vabs = np.nanmax(np.abs(closure_grid))
     extent = (ntaur[0] - 0.5, ntaur[-1] + 0.5, ntr[0] - 0.5, ntr[-1] + 0.5)
     xticks = np.array([15, 30, 45, 60])
-    ax.set_xticks(xticks + 1)    
-    ax.imshow(closure_grid[::-1,:], aspect=1, cmap=cc.cm['bjy'], vmin=-vabs, vmax=vabs, extent=extent, zorder=4)
-    lw=1.0
-    lc='#ffffff'
+    ax.set_xticks(xticks + 1)
+    ax.imshow(closure_grid[::-1,:], aspect=0.75, cmap=cc.cm['bjy'], vmin=-vabs, vmax=vabs, extent=extent, zorder=4)
+    lw = 1.0
+    lc = '#ffffff'
     ax.plot((extent[2] + 2, np.mean(ntr) + 1), (extent[0], ntaur[-1] - 2), lw=lw, c=lc)
     ax.plot((np.mean(ntr) + 2, extent[3] + 1), (ntaur[-1] - 2, extent[0]), lw=lw, c=lc)
     ax.set_xlim(extent[:2])
