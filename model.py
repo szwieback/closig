@@ -62,7 +62,7 @@ class DiffDispTile(CovModel):
 class VegModel(CovModel):
     def __init__(
             self, wavelength=0.2, h=0.4, Fg=0.5, fc=1.0, dcohg=0.7, dcohc=0.5, cohig=0.8, cohic=0.2,
-            nrm=1.40, nra=0.15, nrstd=0.02, Nyear=30, seed=678, theta=0.0):
+            nrm=1.30, nra=0.10, nrstd=0.02, nrt=0.10, Nyear=30, seed=678, theta=0.0):
         # Nyear: scenes per year
         self.wavelength = wavelength
         self.h = h
@@ -70,14 +70,15 @@ class VegModel(CovModel):
         self.Fg, self.fc = Fg, fc
         self.dcohg, self.dcohc = dcohg, dcohc
         self.cohig, self.cohic = cohig, cohic
-        self.nrm, self.nra, self.nrstd = nrm, nra, nrstd
+        self.nrm, self.nra, self.nrstd, self.nrt = nrm, nra, nrstd, nrt
         self.Nyear = Nyear
         self.seed = seed
 
     def _draw_nr(self, n0):
         rng = np.random.default_rng(self.seed + n0)
         nrtilde = rng.normal(0, self.nrstd, 1)
-        nr = self.nrm + nrtilde + self.nra * np.cos(2 * np.pi * n0 / self.Nyear)
+        costerm = np.cos(2 * np.pi * n0 / self.Nyear)
+        nr = self.nrm + self.nra * costerm + n0 / self.Nyear * self.nrt + nrtilde
         return float(nr)
 
     def __coherence(self, dcoh, cohi, n0, n1):
@@ -89,7 +90,7 @@ class VegModel(CovModel):
     def _covariance_element(self, n0, n1, displacement_phase=False):
         k = 2 * np.pi / self.wavelength
         dn = self._draw_nr(n0) - self._draw_nr(n1)
-        heff = h / np.cos(self.theta)
+        heff = self.h / np.cos(self.theta)
         phase_tot = 2 * k * dn * heff
         if np.abs(phase_tot) < np.pi * 1e-6:
             integral = heff
@@ -100,54 +101,8 @@ class VegModel(CovModel):
         C01g = self.Fg * cohg * np.exp(1j * phase_tot)
         C01c = self.fc * cohc * integral
         C01 = C01g + C01c
-        if displacement_phase: C01 = np.abs(C01) # nothing moves
+        if displacement_phase: C01 = np.abs(C01)  # nothing moves
         return C01
 
-if __name__ == '__main__':
-    N = 91
-    Nyear = 30
 
-    dphase = 2 * np.pi / Nyear
-    intensities = [0.8, 0.2]
-    model = DiffDispTile(intensities, [0.30, 0.30], [0.0, dphase], coh0=[0.6, 0.6])
-    h, theta = 0.4, 30 * np.pi / 180
-    model = VegModel(wavelength=0.2, h=h, Fg=0.5, fc=0.5 / h, Nyear=Nyear, nrstd=0.02, theta=theta)
-    C = model.covariance(N, displacement_phase=True)
-    from expansion import TwoHopBasis, SmallStepBasis
-    b = SmallStepBasis(N)
-    # b = TwoHopBasis(N)
-    closures = b.evaluate_covariance_matrix(C) * 180 / np.pi
-
-    import matplotlib.pyplot as plt
-    import colorcet as cc
-    nt, ntau = b.nt, b.ntau
-    fig, ax = plt.subplots(1, 1)
-    osf = 4
-    ntr = np.arange(min(nt), max(nt), step=1 / osf)
-    ntaur = np.arange(min(ntau), max(ntau), step=0.5 / osf)
-
-    # closures2d = np.ones((len(ntr), len(ntaur)), dtype=closures.dtype) * np.nan
-    # for _jnt, _nt   in enumerate(ntr):
-    #     for _jntau, _ntau in enumerate(ntaur):
-    #         jz = np.nonzero(np.logical_and(nt == _nt, ntau == _ntau))[0]
-    #         try:
-    #             closures2d[_jnt, _jntau] = closures[jz]
-    #         except:
-    #             pass
-    from scipy.interpolate import griddata
-    mg = tuple(np.meshgrid(ntr, ntaur))
-    closure_grid = griddata(np.stack((nt, ntau), axis=1), closures[:, 0], mg, method='linear')
-    vabs = np.nanmax(np.abs(closure_grid))
-    extent = (ntaur[0] - 0.5, ntaur[-1] + 0.5, ntr[0] - 0.5, ntr[-1] + 0.5)
-    xticks = np.array([15, 30, 45, 60])
-    ax.set_xticks(xticks + 1)
-    ax.imshow(closure_grid[::-1,:], aspect=0.75, cmap=cc.cm['bjy'], vmin=-vabs, vmax=vabs, extent=extent, zorder=4)
-    lw = 1.0
-    lc = '#ffffff'
-    ax.plot((extent[2] + 2, np.mean(ntr) + 1), (extent[0], ntaur[-1] - 2), lw=lw, c=lc)
-    ax.plot((np.mean(ntr) + 2, extent[3] + 1), (ntaur[-1] - 2, extent[0]), lw=lw, c=lc)
-    ax.set_xlim(extent[:2])
-    ax.set_ylim(extent[2:])
-    ax.grid(True, zorder=0, axis='x', color='#eeeeee', lw=0.5)
-    plt.show()
 

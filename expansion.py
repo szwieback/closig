@@ -6,6 +6,7 @@ Created on Jan 4, 2023
 
 import numpy as np
 from abc import ABC, abstractmethod
+from pip._vendor.pyparsing.core import Forward
 
 # Covariance:
 # ..., N, N
@@ -20,7 +21,14 @@ class Basis():
         pass
 
     def _std_basis(self, n0, n1):
-        ind = (n0 + 1) * self.N - n0 * (n0 + 1) // 2 + (n1 - n0 - self.N - 1)
+        if max(n0, n1) >= self.N or min(n0, n1) < 0 or n0 >= n1: raise ValueError(f"{n0}, {n1} not valid")
+        ind = n0 * self.N - n0 * (n0 + 1) // 2 + (n1 - n0 - 1)
+        return ind
+    
+    def _std_basis_vec(self, n0, n1):
+        # includes self-connected edges (for "intensities")
+        if max(n0, n1) >= self.N or min(n0, n1) < 0 or n0 > n1: raise ValueError(f"{n0}, {n1} not valid")
+        ind = n0 * self.N - n0 * (n0 - 1) // 2 + (n1 - n0)
         return ind
 
     # get covector in standard basis
@@ -33,35 +41,56 @@ class Basis():
     def basis_matrix_std_basis(self):
         return np.stack([self.to_std_basis(covector) for covector in self.covectors], axis=0)
     
-    @staticmethod
-    def _evaluate_covariance_matrix(C, covector, normalize=False, compl=False):
-        if len(C.shape) < 2: raise ValueError(f"C of shape {C.shape}")
-        _C = C if len(C.shape) > 2 else C[np.newaxis, :]
-        gcoh = np.ones(_C.shape[:-2], dtype=np.complex)
+    def __evaluate(self, C, covector, normalize=False, vectorized=False, forward_only=False):
+        _edgecombs = [(0, 1), (0, 0), (1, 1)]
+        shape = C.shape[:-2] if not vectorized else C.shape[:-1]
+        gcoh = np.ones(shape, dtype=np.complex256)
         for edge in covector:
-            g = _C[..., edge[0], edge[1]]
-            if normalize:
-                g /= np.sqrt(_C[..., edge[0], edge[0]] - _C[..., edge[1], edge[1]])
+            if not vectorized:
+                g = C[..., edge[0], edge[1]]
+                if normalize:
+                    g /= np.sqrt(C[..., edge[0], edge[0]] * C[..., edge[1], edge[1]])
+            else:
+                inds = [self._std_basis_vec(edge[e0], edge[e1]) for e0, e1 in _edgecombs]
+                g = C[..., inds[0]]
+                if normalize:
+                    g /= np.abs(g)#np.sqrt(C[..., inds[1]] * C[..., inds[2]])
+                    import warnings
+                    warnings.warn('Normalization not based on coherence')
             if edge[2] == -1:
                 g = g.conj()
+                if forward_only: g = np.ones_like(g)
             if np.abs(edge[2]) != 1:
                 raise ValueError("Only pure cycles supported")
             gcoh *= g
+        return gcoh
+
+    def _evaluate_covariance(
+            self, C, covector, normalize=False, compl=False, vectorized=False, forward_only=False):
+        if not vectorized:
+            if len(C.shape) < 2: raise ValueError(f"C of shape {C.shape}")
+            _C = C if len(C.shape) > 2 else C[np.newaxis,:]
+        else:
+            _C = C if len(C.shape) > 1 else C[np.newxis, :]
+        gcoh = self.__evaluate(
+            C, covector, vectorized=vectorized, normalize=normalize, forward_only=forward_only)
         if not compl:
             gcoh = np.angle(gcoh)
         return gcoh
-    
-    def evaluate_covariance_matrix(self, C, covector=None, normalize=False, compl=False):
+
+    def evaluate_covariance(
+            self, C, covector=None, normalize=False, compl=False, vectorized=False, forward_only=False):
+        def _eval(covector):
+            gcoh = self._evaluate_covariance(
+                C, covector=covector, normalize=normalize, compl=compl, vectorized=vectorized, 
+                forward_only=forward_only)
+            return gcoh
         if covector is not None:
-            return self._evaluate_covariance_matrix(C, covector=covector, normalize=normalize, compl=compl)
+            return _eval(covector)
         else:
-            gcohs = []
-            for covector in self.covectors:
-                gcoh =  self._evaluate_covariance_matrix(
-                    C, covector=covector, normalize=normalize, compl=compl)
-                gcohs.append(gcoh)
+            gcohs = [_eval(covector) for covector in self.covectors]
             return np.array(gcohs)
-    
+
     def _test_number(self):
         assert len(self.covectors) == (self.N - 1) * (self.N - 2) / 2
 
@@ -132,11 +161,11 @@ class TwoHopBasis(Basis):
     def _h(ntau):
         from math import floor, ceil
         return floor(ntau / 2), ceil(ntau / 2)
-        
+
     @staticmethod
     def _covector(nt, ntau):
         hminus, hplus = TwoHopBasis._h(ntau)
-        return [(nt-hminus, nt, 1), (nt, nt+hplus, 1), (nt-hminus, nt+hplus, -1)]
+        return [(nt - hminus, nt, 1), (nt, nt + hplus, 1), (nt - hminus, nt + hplus, -1)]
 
 if __name__ == '__main__':
     L = 40
@@ -146,9 +175,17 @@ if __name__ == '__main__':
     # C = np.mean(y[..., np.newaxis] * y[..., np.newaxis,:].conj(), axis=-3)
     # print(C.shape)
     # ss_covectors(N)
-    for N in range(3, 5):
-        b = TwoHopBasis(N)
-        print(N, len(b.covectors))
-        b._test_dimension()
-        b._test_number()
-    print(b.covectors)
+    # for N in range(3, 5):
+    #     b = TwoHopBasis(N)
+    #     print(N, len(b.covectors))
+    #     b._test_dimension()
+    #     b._test_number()
+
+    N = 91
+    b = TwoHopBasis(N)
+    for n0 in range(N):
+        for n1 in range(n0, N):
+            print(n0, n1, b._std_basis_vec(n0, n1))
+    print(N * (N+1) / 2)
+    
+    # std_basis_Cvec
