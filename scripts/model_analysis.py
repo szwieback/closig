@@ -25,7 +25,7 @@ def model_catalogue(scenario, Nyear=30):
         raise ValueError(f"Scenario {scenario} not known")
     return model
 
-def double_plot(bases, models, ticks=None, ticklabels=None):
+def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
     from plotting import triangle_plot, prepare_figure, initialize_matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
@@ -89,8 +89,8 @@ def double_plot(bases, models, ticks=None, ticklabels=None):
         ax.text(
             -0.50, 0.50, rowlabels[jax], rotation=90, transform=ax.transAxes, ha='right', va='center',
             c='k')
-
-    plt.show()
+    if fnout is not None:
+        plt.savefig(fnout)
 
 if __name__ == '__main__':
     from expansion import TwoHopBasis, SmallStepBasis
@@ -102,5 +102,10 @@ if __name__ == '__main__':
     scennames = ['diffdisp', 'seasonalveg', 'seasonaltrendveg']
     m = [model_catalogue(scenname, Nyear=Nyear) for scenname in scennames]
     models = {'differential subsidence': m[0], 'seasonal vegetation': m[1], 'seasonal vegetation + trend': m[2]}
-    double_plot(bases, models, ticks=ticks, ticklabels=ticklabels)
+    fnout = '/home/simon/Work/closig/figures/model.pdf'
+    double_plot(bases, models, fnout=fnout, ticks=ticks, ticklabels=ticklabels)
+    
+    # to do: show sensitivity to single phase difference
+    # spatial plots of tau=1 year closure phases
+    # try normalization based on intensity(geom. mean)
     
