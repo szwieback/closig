@@ -72,8 +72,6 @@ target/
 
 # pyenv
 .python-version
-.settings
-.prefs
 
 # celery beat schedule file
 celerybeat-schedule
@@ -98,7 +96,7 @@ ENV/
 # PyDev
 .project
 .pydevproject
+.settings/
 
 # python path script
 .pythonpath
-.pyc
