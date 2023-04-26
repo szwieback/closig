@@ -53,11 +53,11 @@ class CovModel():
             self._covariance_element(p0, p0, geom=geom) * self._covariance_element(p1, p1, geom=geom))
         return num / denom
 
-    def covariance(self, N, coherence=False, displacement_phase=False, geom=None):
-        C = np.zeros((N, N), dtype=np.complex64)
-        for p0 in range(N):
+    def covariance(self, P, coherence=False, displacement_phase=False, geom=None):
+        C = np.zeros((P, P), dtype=np.complex64)
+        for p0 in range(P):
             C[p0, p0] = self._covariance_element(p0, p0)
-            for p1 in range(p0 + 1, N):
+            for p1 in range(p0 + 1, P):
                 if not coherence:
                     C01 = self._covariance_element(p0, p1, geom=geom)
                 else:
@@ -238,12 +238,4 @@ if __name__ == '__main__':
     center = HomogSoilLayer(dz=0.00)
     trough = HomogSoilLayer(dz=-0.05)
     pm = TiledCovModel([center, trough], fractions=[0.8, 0.2])
-
-
-    svl = SeasonalVegModel(n_amp=0.0500-0.0005j, P_year=10)
-    svm = LayeredCovModel([svl, sl])
-    print(svl._n(0), svl._n(1))
-    print(np.angle(svm.covariance(5, geom=geom)[0, 1]))
-    
-    sl = ScattSoilLayer([2.0 - 1.0j, 2.2 - 1.2j])
 
