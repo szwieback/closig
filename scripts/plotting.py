@@ -83,22 +83,22 @@ def triangle_plot(
     from scipy.interpolate import griddata
     if ax is None: fig, ax = plt.subplot(1, 1)
     if cmap is None: cmap = cc.cm['CET_C1']
-    nt, ntau = basis.nt, basis.ntau
-    ntr = np.arange(min(nt), max(nt), step=1 / osf)
-    ntaur = np.arange(min(ntau), max(ntau), step=0.5 / osf)
-    mg = tuple(np.meshgrid(ntr, ntaur))
+    pt, ptau = basis.pt, basis.ptau
+    ptr = np.arange(min(pt), max(pt), step=1 / osf)
+    ptaur = np.arange(min(ptau), max(ptau), step=0.5 / osf)
+    mg = tuple(np.meshgrid(ptr, ptaur))
     closures = real_closures(cclosures)
-    closure_grid = griddata(np.stack((nt, ntau), axis=1), closures, mg, method='nearest')
-    closure_grid_linear = griddata(np.stack((nt, ntau), axis=1), closures, mg, method='linear')
+    closure_grid = griddata(np.stack((pt, ptau), axis=1), closures, mg, method='nearest')
+    closure_grid_linear = griddata(np.stack((pt, ptau), axis=1), closures, mg, method='linear')
     closure_grid[np.isnan(closure_grid_linear)] = np.nan
     if cclosures_ref is not None:
         raise NotImplementedError()
         closures_ref = real_closures(cclosures_ref)
-        closure_ref_grid = griddata(np.stack((nt, ntau), axis=1), closures_ref, mg, method='linear')
+        closure_ref_grid = griddata(np.stack((pt, ptau), axis=1), closures_ref, mg, method='linear')
         assert closures_ref.shape == closures.shape
     if vabs is None: vabs = np.nanmax(np.abs(closure_grid))
-    N = basis.N
-    extent = (1, N + 0.5, 1, N + 0.5)    
+    P = basis.P
+    extent = (1, P + 0.5, 1, P + 0.5)    
     if ticks is not None: 
         ax.set_xticks(ticks)
         ax.set_yticks(ticks)
