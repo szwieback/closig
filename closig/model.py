@@ -205,11 +205,11 @@ class ScattSoilLayer(ScattLayer):
         if geom is None: geom = self._default_geom
         return geom.phase_from_dz(self.dz, p0, p1)
 
-class SeasonalVegModel(ScattLayer):
+class SeasonalVegLayer(ScattLayer):
     def __init__(
         self, n_mean=None, n_std=0.0, n_amp=0.0, n_t=0.0, P_year=30, density=1.0, h=0.4,
         dcoh=0.5, coh0=0.0, seed=678):
-        super(SeasonalVegModel, self).__init__(
+        super(SeasonalVegLayer, self).__init__(
             None, density=density, dcoh=dcoh, coh0=coh0, h=h)
         if n_mean is None: n_mean=1.2 - 0.005j
         self.n_mean = n_mean  # mean refractive index (complex)
