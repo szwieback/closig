@@ -6,6 +6,9 @@ Created on Jan 5, 2023
 import numpy as np
 from abc import abstractmethod
 from cmath import exp
+from matplotlib import pyplot as plt
+import visualization.model_diagram as md
+
 
 def coherence_model(p0, p1, dcoh, coh0=0.0):
     if p0 == p1:
@@ -13,6 +16,7 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
     else:
         coh = (dcoh) ** (abs(p1 - p0)) + coh0
     return coh
+
 
 class Geom():
     # far field, downwelling (need to flip for backscattered waves)
@@ -32,6 +36,7 @@ class Geom():
 
     def phase_from_dz(self, dz, p0, p1):
         return -2 * self.kz() * dz * (p0 - p1)
+
 
 class CovModel():
     @abstractmethod
@@ -63,14 +68,40 @@ class CovModel():
                 else:
                     C01 = self._coherence_element(p0, p1, geom=geom)
                 if displacement_phase:
-                    C01 = np.abs(C01) * np.exp(1j * self._displacement_phase(p0, p1, geom=geom))
+                    C01 = np.abs(C01) * np.exp(1j *
+                                               self._displacement_phase(p0, p1, geom=geom))
                 C[p0, p1] = C01
                 C[p1, p0] = C01.conj()
         return C
 
+    def get_tile_details(self):
+        return {
+            'covmodels': [self.name],
+            'fractions': [1],
+        }
+
+    def plot_diagram(self, **kwargs):
+        md.illustrate_model(self.get_layer_details(), **kwargs)
+
+    def plot_matrices(self, P, coherence=True, displacement_phase=True, ax: np.ndarray = None):
+        C = self.covariance(P, coherence=coherence,
+                            displacement_phase=displacement_phase)
+        if ax is None:
+            fig, ax = plt.subplots(1, 2)
+        else:
+            assert len(ax) == 2
+        ax[0].set_title('Coherence')
+        ax[0].imshow(np.abs(C), vmin=0, vmax=1, cmap=plt.cm.viridis)
+
+        ax[1].set_title('Phase')
+        ax[1].imshow(np.angle(C), vmin=-np.pi, vmax=np.pi, cmap=plt.cm.seismic)
+        if ax is None:
+            plt.show()
+
     @property
     def _default_geom(self):
         return Geom()
+
 
 class LayeredCovModel(CovModel):
     # works in series, topmost layer comes first; last layer determines displacement
@@ -89,35 +120,57 @@ class LayeredCovModel(CovModel):
         return np.concatenate((np.array([1.0]), tc))
 
     def _displacement_phase(self, p0, p1, geom=None):
-        if geom is None: geom = self._default_geom
+        if geom is None:
+            geom = self._default_geom
         return self.layers[-1]._displacement_phase(p0, p1, geom=geom)
 
     def _covariance_element(self, p0, p1, geom=None):
-        if geom is None: geom = self._default_geom
+        if geom is None:
+            geom = self._default_geom
         phasors = self._propagation_phasor(p0, p1, geom=geom)
         dphase = self._displacement_phase(p0, p1, geom=geom)
-        covs_ind = np.array([l._covariance_element(p0, p1, geom=geom) for l in self.layers])
+        covs_ind = np.array([l._covariance_element(
+            p0, p1, geom=geom) for l in self.layers])
         cov = np.sum(covs_ind * phasors[:-1]) * exp(1j * dphase)
         return cov
 
+    def get_layer_details(self):
+        return {l.name: l.get_tile_details() for l in self.layers}
+
+
 class TiledCovModel(CovModel):
+
     # works in parallel
-    def __init__(self, covmodels, fractions=None):
+    def __init__(self, covmodels, fractions=None, name=''):
         self.covmodels = covmodels
         # array of area fractions (sums to 1)
-        self.fractions = fractions if fractions is not None else np.ones(len(covmodels)) / len(covmodels)
+        self.fractions = fractions if fractions is not None else np.ones(
+            len(covmodels)) / len(covmodels)
         assert np.all(np.isclose(np.sum(self.fractions), 1))
+        self.name = name
 
     def _displacement_phase(self, p0, p1, geom=None):
-        if geom is None: geom = self._default_geom
-        dphases = np.array([cm._displacement_phase(p0, p1, geom=geom) for cm in self.covmodels])
+        if geom is None:
+            geom = self._default_geom
+        dphases = np.array([cm._displacement_phase(
+            p0, p1, geom=geom) for cm in self.covmodels])
         return np.sum(self.fractions * dphases)
 
     def _covariance_element(self, p0, p1, geom=None):
-        if geom is None: geom = self._default_geom
-        covs = np.array([cm._covariance_element(p0, p1, geom=geom) for cm in self.covmodels])
-        cdphases = np.array([exp(1j * cm._displacement_phase(p0, p1, geom=geom)) for cm in self.covmodels])
+        if geom is None:
+            geom = self._default_geom
+        covs = np.array([cm._covariance_element(p0, p1, geom=geom)
+                         for cm in self.covmodels])
+        cdphases = np.array(
+            [exp(1j * cm._displacement_phase(p0, p1, geom=geom)) for cm in self.covmodels])
         return np.sum(self.fractions * covs * cdphases)
+
+    def get_tile_details(self):
+        return {
+            'covmodels': [cov.name for cov in self.covmodels],
+            'fractions': self.fractions,
+        }
+
 
 class Layer(CovModel):
 
@@ -129,13 +182,16 @@ class Layer(CovModel):
     def _transmissivity(self, p, geom=None):
         pass
 
+
 class HomogSoilLayer(Layer):
 
-    def __init__(self, intens=1.0, dcoh=0.9, coh0=0.0, dz=0.0):
+    def __init__(self, intens=1.0, dcoh=0.9, coh0=0.0, dz=0.0, name='Homogeonous Soil'):
         self.intens = intens  # array or scalar
         self.dcoh = dcoh  # coherence model: gamma_ij= | i - j | ** dcoh + coh0
         self.coh0 = coh0
-        self.dz = dz  # z displacement between adjacent acquisitions [uplift positive for (earlier)(later)*]
+        # z displacement between adjacent acquisitions [uplift positive for (earlier)(later)*]
+        self.dz = dz
+        self.name = name
 
     def _transmissivity(self, p, geom=None):
         return 0.0
@@ -154,13 +210,16 @@ class HomogSoilLayer(Layer):
 
     def _displacement_phase(self, p0, p1, geom=None):
         # absolute phase without x component
-        if geom is None: geom = self._default_geom
+        if geom is None:
+            geom = self._default_geom
         return geom.phase_from_dz(self.dz, p0, p1)
+
 
 class ScattLayer(Layer):
     def __init__(
-        self, n, density=1.0, dcoh=0.5, coh0=0.0, h=0.4):
-        self.n = n  # refractive index array (engineering sign convention: nr - j ni)
+            self, n, density=1.0, dcoh=0.5, coh0=0.0, h=0.4):
+        # refractive index array (engineering sign convention: nr - j ni)
+        self.n = n
         self.density = density  # dcross section/dz; time invariant
         self.dcoh = dcoh
         self.coh0 = coh0
@@ -168,7 +227,8 @@ class ScattLayer(Layer):
 
     def _transmissivity(self, p, geom=None):
         # amplitude; uses exp(i(-kx+wt)) sign convention
-        if geom is None: geom = self._default_geom
+        if geom is None:
+            geom = self._default_geom
         if self.h is None or self.h <= 0:
             return 0.0
         else:
@@ -183,7 +243,8 @@ class ScattLayer(Layer):
         return self.n[p]
 
     def _covariance_element(self, p0, p1, geom=None):
-        if geom is None: geom = self._default_geom
+        if geom is None:
+            geom = self._default_geom
         coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
         dens_eff = self.density * coh
         n_p0, n_p1 = self._n(p0), self._n(p1)
@@ -192,6 +253,7 @@ class ScattLayer(Layer):
         phasor_bottom = 0 if self.h is None else exp(-2j * dkzc * (-self.h))
         c01 = 1j * dens_eff / (2 * dkzc) * (1 - phasor_bottom)
         return c01
+
 
 class ScattSoilLayer(ScattLayer):
 
@@ -202,40 +264,89 @@ class ScattSoilLayer(ScattLayer):
 
     def _displacement_phase(self, p0, p1, geom=None):
         # absolute phase without x component
-        if geom is None: geom = self._default_geom
+        if geom is None:
+            geom = self._default_geom
         return geom.phase_from_dz(self.dz, p0, p1)
 
+
 class SeasonalVegLayer(ScattLayer):
+    # describe seasonal vegetation layer
+    # n_mean: mean refractive index (complex)
+    # n_std: std deviation (complex)
+    # n_amp: annual amplitude (complex)
+    # n_t: trend rate (change in mean per year; complex)
+    # P_year: period of annual cycle (days)
+    # density: dcross section/dz; time invariant
+    #  h: canopy height/layer depth [None: infinity]
+    # dcoh: coherence model: gamma_ij= | i - j | ** dcoh + coh0
+    # coh0: coherence model: gamma_ij= | i - j | ** dcoh + coh0
+    # seed: random seed for generating random field
+
     def __init__(
-        self, n_mean=None, n_std=0.0, n_amp=0.0, n_t=0.0, P_year=30, density=1.0, h=0.4,
-        dcoh=0.5, coh0=0.0, seed=678):
+            self, n_mean=None, n_std=0.0, n_amp=0.0, n_t=0.0, P_year=30, density=1.0, h=0.4,
+            dcoh=0.5, coh0=0.0, seed=678, name='Seasonal Vegetation'):
         super(SeasonalVegLayer, self).__init__(
             None, density=density, dcoh=dcoh, coh0=coh0, h=h)
-        if n_mean is None: n_mean=1.2 - 0.005j
+        if n_mean is None:
+            n_mean = 1.2 - 0.005j
         self.n_mean = n_mean  # mean refractive index (complex)
         self.n_std = n_std  # std deviation (complex)
         self.n_amp = n_amp  # annual amplitude (complex)
         self.n_t = n_t  # trend rate (change in mean per year; complex)
         self.P_year = P_year
         self.seed = seed
+        self.name = name
 
     def _n(self, p):
         rng = np.random.default_rng(self.seed + p)
-        n_random = rng.normal(0, self.n_std.real, 1) + 1j * rng.normal(0, self.n_std.imag, 1)
+        n_random = rng.normal(0, self.n_std.real, 1) + \
+            1j * rng.normal(0, self.n_std.imag, 1)
         costerm = np.cos(2 * np.pi * p / self.P_year)
         n = self.n_mean + self.n_amp * costerm + p / self.P_year * self.n_t + n_random
         return complex(n)
 
+
 if __name__ == '__main__':
-    geom = Geom(0.6, wavelength=0.2)
-    n = 1.0 - 0.001j
-    vl = ScattLayer([n, 1.2 - 0.001j, n], density=0.03, dcoh=1.0, h=0.1)
-    t = vl._transmissivity(0, geom=geom)
-    sl = HomogSoilLayer(dcoh=0.9)
-    m = LayeredCovModel([vl, sl])
-    print(np.angle(m._covariance_element(0, 1, geom=geom)))
+    # geom = Geom(0.6, wavelength=0.2)
+    # n = 1.0 - 0.001j
+    # vl = ScattLayer([n, 1.2 - 0.001j, 2 - 0.02j, 1.2 - 0.02j, 3 - 0.02j, 5 - 0.04j, 1.2 - 0.001j, 3 - 0.005j],
+    #                 density=0.03, dcoh=1, h=0.2)
+    # t = vl._transmissivity(0, geom=geom)
+    # sl = HomogSoilLayer(dcoh=0.9)
+    # m = LayeredCovModel([vl, sl])
+    # plt.imshow(np.abs(m.covariance(8)), vmin=0, vmax=1, cmap='viridis')
+    # plt.imshow(np.angle(m.covariance(8)), vmin=-
+    #            np.pi, vmax=np.pi, cmap='seismic')
 
-    center = HomogSoilLayer(dz=0.00)
-    trough = HomogSoilLayer(dz=-0.05)
-    pm = TiledCovModel([center, trough], fractions=[0.8, 0.2])
+    # # plot the angle of the covariance matrix with a diverging colormap alongside the magnitude with two subplots
+    # fig, (ax1, ax2) = plt.subplots(1, 2)
 
+    # im1 = ax1.imshow(np.abs(m.covariance(8, coherence=True,
+    #                                      displacement_phase=True)), vmin=0, vmax=1, cmap='viridis')
+    # im2 = ax2.imshow(np.angle(m.covariance(8, coherence=True,
+    #                                        displacement_phase=True)), vmin=-
+    #                  np.pi, vmax=np.pi, cmap='seismic')
+    # plt.show()
+    # create a model with a seasonal vegetation layer
+    vl = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0.0001, n_amp=0.1,
+                          n_t=0.5, P_year=30, density=0.01, dcoh=0.9, h=0.05, name='Shrubs')
+
+    vl2 = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0.0001, n_amp=0.2,
+                           n_t=0.5, P_year=30, density=0.01, dcoh=0.9, h=0.5, name='Canopy')
+
+    center = HomogSoilLayer(dz=0.00, dcoh=1, name='Center')
+    trough = HomogSoilLayer(dz=-0.05, dcoh=1, name='Trough')
+    disp = TiledCovModel([center, trough], fractions=[
+        0.8, 0.2], name='Heterogenous Displacement')
+    layered = LayeredCovModel([vl, vl2])
+
+    fig, ax = plt.subplots(nrows=1, ncols=3)
+
+    layered.plot_diagram(ax=ax[0])
+    layered.plot_matrices(
+        8, coherence=True, displacement_phase=True, ax=[ax[1], ax[2]])
+
+    plt.show()
+
+    # plt.imshow(np.abs(pm.covariance(2)), vmin=0, vmax=1, cmap='viridis')
+    # plt.show()
