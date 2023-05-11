@@ -12,8 +12,8 @@ def illustrate_model(layers, ax=None):
     ax: the axis to plot on
     """
 
-    fig = plt.figure(figsize=(10, 4))
     if ax is None:
+        fig = plt.figure(figsize=(10, 4))
         ax = fig.add_subplot(111)
 
     # remove ticks and labels
@@ -26,7 +26,6 @@ def illustrate_model(layers, ax=None):
     # for each layer make a rectangle and print its name, plot each rectangle below the previous one
     for i, layer in enumerate(layers):
         # get the number of sub tiles
-        print(layers[layer])
         num_sub_tiles = len(layers[layer])
         color = 'forestgreen'
 
