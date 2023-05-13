@@ -23,7 +23,7 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
 
 class Geom():
     # far field, downwelling (need to flip for backscattered waves)
-    def __init__(self, theta=0.0, wavelength=0.05):
+    def __init__(self, theta=0.0, wavelength=0.2):
         self.theta = theta  # incidence angle [rad]
         self.wavelength = wavelength  # in vacuum
 
@@ -64,7 +64,14 @@ class CovModel():
             self._covariance_element(p0, p0, geom=geom) * self._covariance_element(p1, p1, geom=geom))
         return num / denom
 
-    def covariance(self, P, coherence=False, displacement_phase=False, geom=None):
+    def covariance(self, P, coherence=False, displacement_phase=False, geom=None, subset=None):
+        '''
+            P: length of stack
+            coherence: return normalized/coherence matrix instead of covariance matrix
+            displacement_phase: return covariance matrix with displacement phase only
+            geom: geometry object
+            subset: subset covariance matrix with an adjacency matrix G
+        '''
         C = np.zeros((P, P), dtype=np.complex64)
         for p0 in range(P):
             C[p0, p0] = self._covariance_element(p0, p0)
@@ -82,7 +89,11 @@ class CovModel():
         if coherence:
             assert np.isclose(np.abs(np.diag(C)), np.ones(P)).all(
             ), 'Diagonal elements of coherence matrix should be 1'
-        return C
+
+        if subset is not None:
+            return C * subset
+        else:
+            return C
 
     def link(self, P):
         '''
@@ -166,12 +177,13 @@ class ContHetDispModel(CovModel):
         This is akin to my old heterogenous velocity simulations - Rowan
     '''
 
-    def __init__(self, means=[], stds=[], weights=[0.5, 0.5], hist=False, L=500, name=''):
+    def __init__(self, means=[], stds=[], weights=[0.5, 0.5], hist=False, L=500, dcoh=0.9, coh0=0.0, name=''):
         self.means = means
         self.stds = stds
+        self.dcoh = dcoh
+        self.coh0 = coh0
         self.velocities = np.zeros(0)
         assert np.sum(weights) == 1  # weights must sum to 1
-
         for mean, std, weight in zip(means, stds, weights):
             print(f'Mean: {mean}, std: {std}, weight: {weight}')
             N = (int(L * weight))
@@ -200,8 +212,9 @@ class ContHetDispModel(CovModel):
             geom = self._default_geom
         phases = np.exp(1j * 4 * np.pi * self.velocities *
                         (p1 - p0) * (12/365) / geom.wavelength)
+        coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
 
-        return np.mean(phases.real) + 1j * np.mean(phases.imag)
+        return np.mean(phases) * coh
 
 
 class TiledCovModel(CovModel):
@@ -264,7 +277,7 @@ class HomogSoilLayer(Layer):
         self.coh0 = coh0
         # z displacement between adjacent acquisitions [uplift positive for (earlier)(later)*]
         # change this to a vector to account for temporally varying subsidence
-        self.dz = dz
+        self.dz = dz * 12/365  # convert to m/years
         self.name = name
 
     def _transmissivity(self, p, geom=None):
