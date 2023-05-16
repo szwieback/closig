@@ -22,8 +22,11 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
 
 
 class Geom():
-    # far field, downwelling (need to flip for backscattered waves)
-    def __init__(self, theta=0.0, wavelength=0.2):
+    '''
+        far field, downwelling (need to flip for backscattered waves)
+    '''
+
+    def __init__(self, theta=0.0, wavelength=0.05):
         self.theta = theta  # incidence angle [rad]
         self.wavelength = wavelength  # in vacuum
 
@@ -95,11 +98,9 @@ class CovModel():
         else:
             return C
 
-    def link(self, P):
-        '''
-            extract phase history from covariance matrix
-        '''
-        pass
+    def get_baselines(self, P):
+        mg = np.mgrid[0:P, 0:P]
+        return mg[1] - mg[0]
 
     def get_layer_details(self):
         return self.get_tile_details()
@@ -174,7 +175,7 @@ class LayeredCovModel(CovModel):
 class ContHetDispModel(CovModel):
     ''''
         Represents a continous distribution of displacements within a single model block
-        This is akin to my old heterogenous velocity simulations - Rowan
+        This is akin to the old heterogenous velocity simulations - Rowan
     '''
 
     def __init__(self, means=[], stds=[], weights=[0.5, 0.5], hist=False, L=500, dcoh=0.9, coh0=0.0, name=''):
@@ -185,9 +186,7 @@ class ContHetDispModel(CovModel):
         self.velocities = np.zeros(0)
         assert np.sum(weights) == 1  # weights must sum to 1
         for mean, std, weight in zip(means, stds, weights):
-            print(f'Mean: {mean}, std: {std}, weight: {weight}')
             N = (int(L * weight))
-            print(N)
             self.velocities = np.concatenate((self.velocities, np.random.normal(loc=mean,
                                                                                 scale=std, size=N)))
         if hist:
@@ -211,13 +210,24 @@ class ContHetDispModel(CovModel):
         if geom is None:
             geom = self._default_geom
         phases = np.exp(1j * 4 * np.pi * self.velocities *
-                        (p1 - p0) * (12/365) / geom.wavelength)
+                        (p1 - p0) / geom.wavelength)
         coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
 
         return np.mean(phases) * coh
 
 
-class TiledCovModel(CovModel):
+class Layer(CovModel):
+
+    @ abstractmethod
+    def __init__(self):
+        pass
+
+    @ abstractmethod
+    def _transmissivity(self, p, geom=None):
+        pass
+
+
+class TiledCovModel(Layer):
     '''
     In-parallel, single layer, composition of covariance models.
     Represents a weighted sum of adjacent physical processes.
@@ -255,17 +265,6 @@ class TiledCovModel(CovModel):
         }
 
 
-class Layer(CovModel):
-
-    @ abstractmethod
-    def __init__(self):
-        pass
-
-    @ abstractmethod
-    def _transmissivity(self, p, geom=None):
-        pass
-
-
 class HomogSoilLayer(Layer):
     '''
         Represents a single layer of homogenous soil with time invariant dielctric properties. Used to for modeling displacements of the soil rather than changes of the soil.
@@ -277,7 +276,7 @@ class HomogSoilLayer(Layer):
         self.coh0 = coh0
         # z displacement between adjacent acquisitions [uplift positive for (earlier)(later)*]
         # change this to a vector to account for temporally varying subsidence
-        self.dz = dz * 12/365  # convert to m/years
+        self.dz = dz
         self.name = name
 
     def _transmissivity(self, p, geom=None):
@@ -389,6 +388,8 @@ class SeasonalVegLayer(ScattLayer):
             1j * rng.normal(0, self.n_std.imag, 1)
         costerm = np.cos(2 * np.pi * p / self.P_year)
         n = self.n_mean + self.n_amp * costerm + p / self.P_year * self.n_t + n_random
+
+        n += -1j * p / self.P_year * self.n_t / 10
         return complex(n)
 
 

@@ -1,7 +1,11 @@
+'''
+
+This module contains a function to illustrate the model with a diagram
+author: rowan
+
+'''
 from matplotlib import pyplot as plt
 import matplotlib.patheffects as path_effects
-
-# Create an empty canvas to draw a diagram on with matplotlib
 
 
 def illustrate_model(layers, ax=None):
@@ -24,6 +28,8 @@ def illustrate_model(layers, ax=None):
     ax.axis('off')
 
     # for each layer make a rectangle and print its name, plot each rectangle below the previous one
+    # TODO: make the rectangles different colors
+    # TODO: make tiles different heights based on canopy height, soil layer, etc.
     for i, layer in enumerate(layers):
         # get the number of sub tiles
         num_sub_tiles = len(layers[layer])
