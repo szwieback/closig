@@ -229,8 +229,8 @@ class Layer(CovModel):
 
 class TiledCovModel(Layer):
     '''
-    In-parallel, single layer, composition of covariance models.
-    Represents a weighted sum of adjacent physical processes.
+        In-parallel, single layer, composition of covariance models.
+        Represents a weighted sum of adjacent physical processes.
     '''
 
     def __init__(self, covmodels, fractions=None, name=''):
@@ -342,6 +342,10 @@ class ScattLayer(Layer):
 
 
 class ScattSoilLayer(ScattLayer):
+    '''
+        Scattering layer corresponding to changes in soil refractive index. Unlike other models, this requires the user to input the dielectric.
+    '''
+
     def __init__(self, n, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
         super(ScattSoilLayer, self).__init__(
             n, density=density, dcoh=dcoh, coh0=coh0, h=None)
@@ -352,6 +356,45 @@ class ScattSoilLayer(ScattLayer):
         if geom is None:
             geom = self._default_geom
         return geom.phase_from_dz(self.dz, p0, p1)
+
+
+class PrecipScatterSoilLayer(ScattSoilLayer):
+    '''
+        Scattering layer based on repeated impulse wetting but expoential drying of the soil surface.
+        f: frequency of precipitation
+        tau: time constant of exponential drying
+        dz: displacement of soil surface
+    '''
+
+    def _generate_n(self, f, tau, offset=0.1):
+        L = 1000
+        impulses = np.zeros(L)
+        impulses[::f] = 1
+
+        # Exponential decay
+        N = 20
+        kernel = np.exp(-1 * np.arange(0, N) * tau)
+
+        # Convolve
+        n_real = np.convolve(impulses, kernel, mode='same')/50 + offset
+        return n_real - 1j * n_real/10
+
+    def __init__(self, f=10, tau=0.5, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
+
+        n = self._generate_n(f, tau)
+
+        super(ScattSoilLayer, self).__init__(
+            n, density=density, dcoh=dcoh, coh0=coh0, h=None)
+        self.dz = dz
+
+    def _n(self, p):
+        return self.n[p]
+
+    def plot_n(self, P):
+        plt.plot(self.n.real[:P], '-', label='real', color='black')
+        plt.plot(self.n.imag[:P], '--', label='imag', color='black')
+        plt.legend(loc='best')
+        plt.show()
 
 
 class SeasonalVegLayer(ScattLayer):
@@ -388,8 +431,6 @@ class SeasonalVegLayer(ScattLayer):
             1j * rng.normal(0, self.n_std.imag, 1)
         costerm = np.cos(2 * np.pi * p / self.P_year)
         n = self.n_mean + self.n_amp * costerm + p / self.P_year * self.n_t + n_random
-
-        n += -1j * p / self.P_year * self.n_t / 10
         return complex(n)
 
 
