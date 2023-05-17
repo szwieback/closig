@@ -22,6 +22,20 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
     return coh
 
 
+def precipitation(f, tau, L=1000):
+    '''
+        Generate a normalized precipitation timeseries for input into various models
+    '''
+    impulses = np.zeros(L)
+    impulses[5] = 1
+    impulses[5::f] = 1
+
+    # Exponential decay
+    N = 20 / tau
+    kernel = np.exp(-1 * np.arange(0, N) * tau)
+    return np.convolve(impulses, kernel)
+
+
 class Geom():
     '''
         far field, downwelling (need to flip for backscattered waves)
@@ -168,17 +182,19 @@ class ContHetDispModel(CovModel):
         This is akin to the old heterogenous velocity simulations - Rowan
     '''
 
-    def __init__(self, means=[], stds=[], weights=[0.5, 0.5], hist=False, L=500, dcoh=0.9, coh0=0.0, name=''):
+    def __init__(self, means=[], stds=[], weights=[0.5, 0.5], hist=False, L=500, dcoh=0.9, coh0=0.0, seed=678, , name=''):
         self.means = means
         self.stds = stds
         self.dcoh = dcoh
         self.coh0 = coh0
         self.velocities = np.zeros(0)
+        self.seed = seed
         assert np.sum(weights) == 1  # weights must sum to 1
         for mean, std, weight in zip(means, stds, weights):
             N = (int(L * weight))
-            self.velocities = np.concatenate((self.velocities, np.random.normal(loc=mean,
-                                                                                scale=std, size=N)))
+            rng = np.random.default_rng(self.seed)
+            self.velocities = np.concatenate((self.velocities, rng.normal(loc=mean,
+                                                                          scale=std, size=N)))
         if hist:
             sns.kdeplot(self.velocities * 1000)
             plt.hist(self.velocities * 1000, bins=50)
@@ -348,6 +364,49 @@ class ScattSoilLayer(ScattLayer):
         return geom.phase_from_dz(self.dz, p0, p1)
 
 
+class LohmanLayer(CovModel):
+    '''
+        From Lohman & Burgi 2023, phase closure errors are modeled as a result of a guassian distribution of sensitivity to soil moisture. For an exponential(1, 1) distribution of s, phi = arctan(Delta mv)
+    '''
+
+    def __init__(self, mv, mean=1, var=1, L=500, dcoh=0.5, coh0=0.0, seed=678):
+        self.mv = mv
+        self.mean = mean
+        self.var = var
+        self.dcoh = dcoh
+        self.coh0 = coh0
+        self.seed = seed
+        rng = np.random.default_rng(self.seed)
+        self.s = rng.exponential(scale=var, size=L)
+
+    def plot_s(self):
+        sns.kdeplot(self.s, bw_adjust=0.5)
+        plt.xlabel('s')
+        plt.ylabel('Density')
+        plt.show()
+
+    def _transmissivity(self):
+        return 0
+
+    def _covariance_element(self, p0, p1, geom=None):
+        coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
+        phases = np.exp(1j * (self.mv[p1] - self.mv[p0]) * self.s)
+        return coh * np.mean(phases)
+
+
+class LohmanPrecipLayer(LohmanLayer):
+    def __init__(self, f, tau, mean=1, var=1, dcoh=0.5, coh0=0, L=500):
+        mv = precipitation(f, tau) * 5 + 30
+        super(LohmanPrecipLayer, self).__init__(
+            mv, mean=mean, var=var, L=L, dcoh=dcoh, coh0=coh0)
+
+    def plot_mv(self, P):
+        plt.plot(self.mv[:P])
+        plt.xlabel('t')
+        plt.ylabel(r'mv [$m^3/m^3$]')
+        plt.show()
+
+
 class PrecipScatterSoilLayer(ScattSoilLayer):
     '''
         Scattering layer based on repeated impulse wetting but expoential drying of the soil surface.
@@ -356,21 +415,12 @@ class PrecipScatterSoilLayer(ScattSoilLayer):
         dz: displacement of soil surface
     '''
 
-    def _generate_n(self, f, tau, offset=0.1, scale=0.05):
-        # Generate a long timeseries initially to sample from
-        impulses = np.zeros(self.max_p)
-        impulses[5] = 1
-        impulses[5::f] = 1
-
-        # Exponential decay
-        N = 20 / tau
-        kernel = np.exp(-1 * np.arange(0, N) * tau)
-
-        # Convolve
-        n_real = np.convolve(impulses, kernel)*scale + offset
-
+    def _generate_n(self, f, tau, offset=0.1, scale=0.05, seed=678):
+        n_real = precipitation(f, tau, self.max_p) * scale + offset
+        rng = np.random.seed(seed)
+        n_noise = rng.normal(loc=0, scale=0, size=n_real.shape)
         # How do we decide on realistic values of n and how does the imaginary part vary?
-        return n_real - 1j * n_real/10
+        return (n_real + n_noise) - 1j * n_real/10
 
     def __init__(self, f=10, tau=0.5, offset=0.1, scale=0.1, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
         self.max_p = 1000
