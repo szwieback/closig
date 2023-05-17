@@ -12,27 +12,36 @@ import numpy as np
 # Tile shrub layers together
 
 model = PrecipScatterSoilLayer(
-    f=5, tau=1.5)
+    f=10, tau=1, dcoh=0.99, coh0=0, offset=0.1, scale=0.05)
 
 
 # Analysis & Plotting
-P = 60
+P = 90
 model.plot_n(P)
 
-fig, ax = plt.subplots(nrows=1, ncols=3)
+fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
 model.plot_matrices(
-    P, coherence=False, displacement_phase=False, ax=[ax[0], ax[1]])
+    P, coherence=True, displacement_phase=False, ax=[ax[0, 0], ax[0, 1]])
 
 # Compute closure phases and plot
 smallStep = SmallStepBasis(P)
-closure_phases = smallStep.evaluate_covariance(
+twoHop = TwoHopBasis(P)
+c_phases_ss = smallStep.evaluate_covariance(
     model.covariance(P), compl=True, normalize=False)
 
-print(f'Mean Closure Phase: {np.angle(closure_phases).mean()}')
-triangle_plot(smallStep, closure_phases,
-              ax=ax[2], cmap=plt.cm.seismic, vabs=45)
-ax[2].set_title(
-    f'Small Step Basis\n mean: {np.round(np.angle(closure_phases).mean(), 3)} rad')
+c_phases_th = twoHop.evaluate_covariance(
+    model.covariance(P), compl=True, normalize=False)
+print(f'Mean Closure Phase: {np.angle(c_phases_ss).mean()}')
+
+triangle_plot(smallStep, c_phases_ss,
+              ax=ax[1, 1], cmap=plt.cm.seismic, vabs=180)
+triangle_plot(twoHop, c_phases_th,
+              ax=ax[1, 0], cmap=plt.cm.seismic, vabs=45)
+ax[1, 1].set_title(
+    f'Small Step Basis\n mean: {np.round(np.angle(c_phases_ss).mean(), 3)} rad')
+ax[1, 0].set_title(
+    f'Two Hop Basis\n mean: {np.round(np.angle(c_phases_th).mean(), 3)} rad')
+plt.tight_layout()
 plt.show()
 
 plt.scatter(model.get_baselines(P).flatten(),
@@ -41,7 +50,7 @@ plt.xlabel('Baseline [t]')
 plt.ylabel('Phase [rad]')
 plt.show()
 
-taus = [1, 15, 20, 30, 45, 60]
+taus = [1, 2, 3, 5, 15, 45, 60]
 
 for tau in taus:
     G = np.abs(model.covariance(P, coherence=True))
@@ -56,7 +65,8 @@ for tau in taus:
 plt.legend(loc='best')
 plt.xlabel('t')
 plt.ylabel('Phase [rad]')
-plt.grid()
+plt.grid(alpha=0.5)
+plt.tight_layout()
 plt.show()
 
 

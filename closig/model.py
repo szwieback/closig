@@ -8,6 +8,7 @@ from abc import abstractmethod
 from cmath import exp
 from matplotlib import pyplot as plt
 import closig.visualization.model_diagram as md
+import closig.visualization.covariance as cov_vis
 from closig.expansion import SmallStepBasis, TwoHopBasis
 import seaborn as sns
 # from closig.linking import EMI
@@ -114,20 +115,9 @@ class CovModel():
     def plot_diagram(self, **kwargs):
         md.illustrate_model(self.get_layer_details(), **kwargs)
 
-    def plot_matrices(self, P, coherence=True, displacement_phase=True, ax: np.ndarray = None):
-        C = self.covariance(P, coherence=coherence,
-                            displacement_phase=displacement_phase)
-        if ax is None:
-            fig, ax = plt.subplots(1, 2)
-        else:
-            assert len(ax) == 2, 'Need two axes for coherence and phase.'
-        ax[0].set_title('Coherence')
-        ax[0].imshow(np.abs(C), vmin=0, vmax=1, cmap=plt.cm.viridis)
-
-        ax[1].set_title('Phase')
-        ax[1].imshow(np.angle(C), vmin=-np.pi, vmax=np.pi, cmap=plt.cm.seismic)
-        if ax is None:
-            plt.show()
+    def plot_matrices(self, P, coherence=True, displacement_phase=True, **kwargs):
+        cov_vis.plot_matrices(self.covariance(
+            P, coherence=coherence, displacement_phase=displacement_phase), **kwargs)
 
     @ property
     def _default_geom(self):
@@ -366,33 +356,37 @@ class PrecipScatterSoilLayer(ScattSoilLayer):
         dz: displacement of soil surface
     '''
 
-    def _generate_n(self, f, tau, offset=0.1):
-        L = 1000
-        impulses = np.zeros(L)
-        impulses[::f] = 1
+    def _generate_n(self, f, tau, offset=0.1, scale=0.05):
+        # Generate a long timeseries initially to sample from
+        impulses = np.zeros(self.max_p)
+        impulses[5] = 1
+        impulses[5::f] = 1
 
         # Exponential decay
-        N = 20
+        N = 20 / tau
         kernel = np.exp(-1 * np.arange(0, N) * tau)
 
         # Convolve
-        n_real = np.convolve(impulses, kernel, mode='same')/50 + offset
+        n_real = np.convolve(impulses, kernel)*scale + offset
+
+        # How do we decide on realistic values of n and how does the imaginary part vary?
         return n_real - 1j * n_real/10
 
-    def __init__(self, f=10, tau=0.5, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
-
-        n = self._generate_n(f, tau)
-
+    def __init__(self, f=10, tau=0.5, offset=0.1, scale=0.1, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
+        self.max_p = 1000
+        n = self._generate_n(f, tau, offset=offset, scale=scale)
         super(ScattSoilLayer, self).__init__(
             n, density=density, dcoh=dcoh, coh0=coh0, h=None)
         self.dz = dz
 
     def _n(self, p):
+        assert p < self.max_p, f"p must be less than {self.max_p}"
         return self.n[p]
 
     def plot_n(self, P):
+        assert P < self.max_p, f"P must be less than {self.max_p}"
         plt.plot(self.n.real[:P], '-', label='real', color='black')
-        plt.plot(self.n.imag[:P], '--', label='imag', color='black')
+        plt.plot(-1 * self.n.imag[:P], '--', label='-1 * imag', color='black')
         plt.legend(loc='best')
         plt.show()
 
