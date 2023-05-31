@@ -129,7 +129,7 @@ class CovModel():
     def plot_diagram(self, **kwargs):
         md.illustrate_model(self.get_layer_details(), **kwargs)
 
-    def plot_matrices(self, P, coherence=True, displacement_phase=True, **kwargs):
+    def plot_matrices(self, P, coherence=True, displacement_phase=False, **kwargs):
         cov_vis.plot_matrices(self.covariance(
             P, coherence=coherence, displacement_phase=displacement_phase), **kwargs)
 
@@ -182,7 +182,7 @@ class ContHetDispModel(CovModel):
         This is akin to the old heterogenous velocity simulations - Rowan
     '''
 
-    def __init__(self, means=[], stds=[], weights=[0.5, 0.5], hist=False, L=500, dcoh=0.9, coh0=0.0, seed=678, , name=''):
+    def __init__(self, means=[], stds=[], weights=[0.5, 0.5], hist=False, L=500, dcoh=0.9, coh0=0.0, seed=678, name=''):
         self.means = means
         self.stds = stds
         self.dcoh = dcoh
@@ -196,9 +196,8 @@ class ContHetDispModel(CovModel):
             self.velocities = np.concatenate((self.velocities, rng.normal(loc=mean,
                                                                           scale=std, size=N)))
         if hist:
-            sns.kdeplot(self.velocities * 1000)
-            plt.hist(self.velocities * 1000, bins=50)
-            plt.xlabel('Velocity (mm/yr)')
+            sns.kdeplot(self.velocities * 1000, bw_adjust=0.5)
+            plt.xlabel('dz')
             plt.show()
         self.name = name
 
@@ -206,20 +205,22 @@ class ContHetDispModel(CovModel):
         return 0.0
 
     def _displacement_phase(self, p0, p1, geom=None):
-
         if geom is None:
             geom = self._default_geom
-        return self._covariance_element(p0, p1, geom=geom)
+        coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
+
+        return geom.phase_from_dz(np.mean(self.velocities), p0, p1)
 
     def _covariance_element(self, p0, p1, geom=None):
         # multilooked phase from multilooked motions
         if geom is None:
             geom = self._default_geom
-        phases = np.exp(1j * 4 * np.pi * self.velocities *
-                        (p1 - p0) / geom.wavelength)
+        # phases = np.exp(1j * 4 * np.pi * self.velocities *
+        #                 (p1 - p0) / geom.wavelength)
         coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
 
-        return np.mean(phases) * coh
+        phases = np.exp(1j * geom.phase_from_dz(self.velocities, p0, p1)) * coh
+        return np.mean(phases)
 
 
 class Layer(CovModel):
@@ -417,7 +418,7 @@ class PrecipScatterSoilLayer(ScattSoilLayer):
 
     def _generate_n(self, f, tau, offset=0.1, scale=0.05, seed=678):
         n_real = precipitation(f, tau, self.max_p) * scale + offset
-        rng = np.random.seed(seed)
+        rng = np.random.default_rng(seed)
         n_noise = rng.normal(loc=0, scale=0, size=n_real.shape)
         # How do we decide on realistic values of n and how does the imaginary part vary?
         return (n_real + n_noise) - 1j * n_real/10
@@ -475,7 +476,7 @@ class SeasonalVegLayer(ScattLayer):
             1j * rng.normal(0, self.n_std.imag, 1)
         costerm = np.cos(2 * np.pi * p / self.P_year)
         n = self.n_mean + self.n_amp * costerm + p / self.P_year * self.n_t + n_random
-        return complex(n)
+        return complex(n.real - 1j * n.real/100)
 
 
 if __name__ == '__main__':
