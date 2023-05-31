@@ -1,22 +1,33 @@
 '''
-    How does velocity bias depend on precipitation frequency?
+    Simulating a semi-arid environment with sparse shrubbery with seasonal moisture content
 '''
-from closig.model import PrecipScatterSoilLayer
+from closig.model import SeasonalVegLayer, HomogSoilLayer, LayeredCovModel, TiledCovModel, ContHetDispModel, ScattSoilLayer
 from closig.expansion import SmallStepBasis, TwoHopBasis
 from scripts.plotting import triangle_plot
 from matplotlib import pyplot as plt
 from closig.linking import EMI, EMI_py, CutOffRegularizer, NearestNeighbor, EVD
 import numpy as np
 
+# Two shrub layers with different moisture content. The first is a dummy with 0 height to simulate bare soil
+shrubs_a = SeasonalVegLayer(n_mean=1.5 - 0.01j, n_std=0, n_amp=0,
+                            n_t=0, P_year=30, density=0, dcoh=1, h=0, name='Bare Soil')
+
+shrubs_b = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0, n_amp=0.01,
+                            n_t=0.0, P_year=30, density=1, dcoh=1, h=1, name='Shrubs')
+
+# shrubs_b = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0, n_amp=0,
+#                             n_t=0.1, P_year=30, density=0.05, dcoh=1, h=0.2, name='Shrubs')
+
 
 # Tile shrub layers together
 
-model = PrecipScatterSoilLayer(
-    f=20, tau=1, dcoh=0.99, coh0=0, offset=0.1, scale=0.1)
-
+model = TiledCovModel([shrubs_a, shrubs_b], fractions=[
+    0, 1], name='Shrubs')
 
 # Analysis & Plotting
-P = 60
+
+# Analysis & Plotting
+P = 45
 # model.plot_s()
 # model.plot_mv(P)
 
@@ -46,18 +57,20 @@ plt.tight_layout()
 plt.show()
 
 
-taus = [2, 5, 8, 10, 15, 20, 25, 30, 45, 60]
+taus = np.arange(1, P, 10)
+l2error = np.zeros((len(taus)))
 colors = plt.cm.viridis(np.linspace(0, 1, len(taus)))
 
-for tau, color in zip(taus, colors):
-
+for tau, color, i in zip(taus, colors, range(len(taus))):
     G = np.abs(model.covariance(P, coherence=True))
     G = CutOffRegularizer().regularize(G, tau_max=tau)
     cov = model.covariance(P, coherence=True)
     cov = cov * G
-    pl_evd = EVD().link(cov, G=G)
-    plt.plot(np.angle(pl_evd), label=f'tau: {tau}', color=color)
 
+    # np.linalg.cholesky(cov)
+    pl_evd = EVD().link(cov, G=G)
+    l2error[i] = np.linalg.norm(np.angle(pl_evd), 2)
+    plt.plot(np.angle(pl_evd), label=f'tau: {tau}', color=color)
 
 plt.legend(loc='best')
 plt.xlabel('t')
@@ -66,8 +79,17 @@ plt.grid(alpha=0.5)
 plt.tight_layout()
 plt.show()
 
+plt.plot(taus, l2error)
+plt.xlabel('bw')
+plt.ylabel('L2 error')
+plt.show()
 
 '''
-   NOTES: TODO
+    The tiling of the shrub layer has minimal affect on the phase linking.
+    This experiment is characteristic standard seasonal vegetation.
+
+    Error is largest in interferograms with temporal baselines of quarter of the period.
+    Smallest errors are in the interferograms with baselines 0, 30, and 60
+
 
 '''

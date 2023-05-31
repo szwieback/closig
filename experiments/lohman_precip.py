@@ -1,7 +1,7 @@
 '''
-    How does velocity bias depend on precipitation frequency?
+    How does velocity bias depend on precipitation frequency for an alternative statistical model?
 '''
-from closig.model import PrecipScatterSoilLayer
+from closig.model import LohmanPrecipLayer
 from closig.expansion import SmallStepBasis, TwoHopBasis
 from scripts.plotting import triangle_plot
 from matplotlib import pyplot as plt
@@ -11,15 +11,11 @@ import numpy as np
 
 # Tile shrub layers together
 
-model = PrecipScatterSoilLayer(
-    f=20, tau=1, dcoh=0.99, coh0=0, offset=0.1, scale=0.1)
-
+model = LohmanPrecipLayer(f=20, tau=0.5, dcoh=0.8,
+                          coh0=0, var=0.5)
 
 # Analysis & Plotting
-P = 60
-# model.plot_s()
-# model.plot_mv(P)
-
+P = 90
 fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
 model.plot_matrices(
     P, coherence=True, displacement_phase=False, ax=[ax[0, 0], ax[0, 1]])
@@ -46,18 +42,17 @@ plt.tight_layout()
 plt.show()
 
 
-taus = [2, 5, 8, 10, 15, 20, 25, 30, 45, 60]
+taus = [2, 5, 10, 30, 45, P]
 colors = plt.cm.viridis(np.linspace(0, 1, len(taus)))
 
 for tau, color in zip(taus, colors):
-
     G = np.abs(model.covariance(P, coherence=True))
     G = CutOffRegularizer().regularize(G, tau_max=tau)
     cov = model.covariance(P, coherence=True)
     cov = cov * G
+
     pl_evd = EVD().link(cov, G=G)
     plt.plot(np.angle(pl_evd), label=f'tau: {tau}', color=color)
-
 
 plt.legend(loc='best')
 plt.xlabel('t')

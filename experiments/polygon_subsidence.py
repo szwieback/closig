@@ -40,7 +40,8 @@ for model, name in zip([model_disc, model_cont], ['Discrete', 'Continuous']):
         G = np.abs(model.covariance(P, coherence=True))
         G = CutOffRegularizer().regularize(G, tau_max=tau)
         cov = model.covariance(P, coherence=True, displacement_phase=False)
-        cov = G * np.exp(1j * np.angle(cov))
+        cov = cov * G
+
         pl_evd = EVD().link(cov, G=G)
         plt.plot(np.angle(pl_evd * pl_true.conj()),
                  label=f'tau: {tau}', color=color)
