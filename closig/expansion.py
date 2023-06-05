@@ -11,6 +11,7 @@ from pip._vendor.pyparsing.core import Forward
 # Covariance:
 # ..., P, P
 
+
 class Basis():
     def __init__(self, P):
         self.P = P
@@ -21,13 +22,15 @@ class Basis():
         pass
 
     def _std_basis(self, p0, p1):
-        if max(p0, p1) >= self.P or min(p0, p1) < 0 or p0 >= p1: raise ValueError(f"{p0}, {p1} not valid")
+        if max(p0, p1) >= self.P or min(p0, p1) < 0 or p0 >= p1:
+            raise ValueError(f"{p0}, {p1} not valid")
         ind = p0 * self.P - p0 * (p0 + 1) // 2 + (p1 - p0 - 1)
         return ind
-    
+
     def _std_basis_vec(self, p0, p1):
         # includes self-connected edges (for "intensities")
-        if max(p0, p1) >= self.P or min(p0, p1) < 0 or p0 > p1: raise ValueError(f"{p0}, {p1} not valid")
+        if max(p0, p1) >= self.P or min(p0, p1) < 0 or p0 > p1:
+            raise ValueError(f"{p0}, {p1} not valid")
         ind = p0 * self.P - p0 * (p0 - 1) // 2 + (p1 - p0)
         return ind
 
@@ -40,7 +43,7 @@ class Basis():
 
     def basis_matrix_std_basis(self):
         return np.stack([self.to_std_basis(covector) for covector in self.covectors], axis=0)
-    
+
     def __evaluate(self, C, covector, normalize=False, vectorized=False, forward_only=False):
         _edgecombs = [(0, 1), (0, 0), (1, 1)]
         shape = C.shape[:-2] if not vectorized else C.shape[:-1]
@@ -49,17 +52,21 @@ class Basis():
             if not vectorized:
                 g = C[..., edge[0], edge[1]]
                 if normalize:
-                    g /= np.sqrt(C[..., edge[0], edge[0]] * C[..., edge[1], edge[1]])
+                    g /= np.sqrt(C[..., edge[0], edge[0]]
+                                 * C[..., edge[1], edge[1]])
             else:
-                inds = [self._std_basis_vec(edge[e0], edge[e1]) for e0, e1 in _edgecombs]
+                inds = [self._std_basis_vec(edge[e0], edge[e1])
+                        for e0, e1 in _edgecombs]
                 g = C[..., inds[0]]
                 if normalize:
-                    g /= np.abs(g)#np.sqrt(C[..., inds[1]] * C[..., inds[2]])
+                    # np.sqrt(C[..., inds[1]] * C[..., inds[2]])
+                    g /= np.abs(g)
                     import warnings
                     warnings.warn('Normalization not based on coherence')
             if edge[2] == -1:
                 g = g.conj()
-                if forward_only: g = np.ones_like(g)
+                if forward_only:
+                    g = np.ones_like(g)
             if np.abs(edge[2]) != 1:
                 raise ValueError("Only pure cycles supported")
             gcoh *= g
@@ -68,8 +75,9 @@ class Basis():
     def _evaluate_covariance(
             self, C, covector, normalize=False, compl=False, vectorized=False, forward_only=False):
         if not vectorized:
-            if len(C.shape) < 2: raise ValueError(f"C of shape {C.shape}")
-            _C = C if len(C.shape) > 2 else C[np.newaxis,:]
+            if len(C.shape) < 2:
+                raise ValueError(f"C of shape {C.shape}")
+            _C = C if len(C.shape) > 2 else C[np.newaxis, :]
         else:
             _C = C if len(C.shape) > 1 else C[np.newxis, :]
         gcoh = self.__evaluate(
@@ -82,7 +90,7 @@ class Basis():
             self, C, covector=None, normalize=False, compl=False, vectorized=False, forward_only=False):
         def _eval(covector):
             gcoh = self._evaluate_covariance(
-                C, covector=covector, normalize=normalize, compl=compl, vectorized=vectorized, 
+                C, covector=covector, normalize=normalize, compl=compl, vectorized=vectorized,
                 forward_only=forward_only)
             return gcoh
         if covector is not None:
@@ -100,6 +108,7 @@ class Basis():
         P, L, U = lu(A)
         assert np.min(np.abs(np.diag(U))) > 1e-16
 
+
 class SmallStepBasis(Basis):
     def __init__(self, P):
         self.P = P
@@ -116,7 +125,7 @@ class SmallStepBasis(Basis):
                 pt.append(self.pt(pb, pe))
                 ptau.append(self._ptau(pb, pe))
         # sorting
-        lsort = lambda x: [x[ind] for ind in np.lexsort((pt, ptau))]
+        def lsort(x): return [x[ind] for ind in np.lexsort((pt, ptau))]
         self.ptau = np.array(lsort(ptau))
         self.pt = np.array(lsort(pt))
         self.covectors = lsort(covectors)
@@ -136,6 +145,7 @@ class SmallStepBasis(Basis):
 
 # class for two hop
 # loop over t, tau
+
 
 class TwoHopBasis(Basis):
     def __init__(self, P):
@@ -157,6 +167,19 @@ class TwoHopBasis(Basis):
         self.ptau, self.pt = np.array(ptau), np.array(pt)
         self.intervals = np.array(intervals)
 
+    def basis_indices(self, cutoff=None):
+        '''
+            Return a triple of indices for the basis vectors,
+            useful in combination with intensity triplet code.
+            Only valid for the two-hop expansion since each covector is restricted to three edges
+        '''
+        indices = np.stack([[covector[0][0], covector[0][1], covector[1][1]]
+                            for covector in self.covectors], axis=0)
+        if cutoff is not None:
+            indices = [triplet for triplet in indices if np.max(
+                triplet) < cutoff]
+        return indices
+
     @staticmethod
     def _h(ptau):
         from math import floor, ceil
@@ -166,6 +189,7 @@ class TwoHopBasis(Basis):
     def _covector(pt, ptau):
         hminus, hplus = TwoHopBasis._h(ptau)
         return [(pt - hminus, pt, 1), (pt, pt + hplus, 1), (pt - hminus, pt + hplus, -1)]
+
 
 if __name__ == '__main__':
     L = 40
@@ -187,5 +211,5 @@ if __name__ == '__main__':
         for p1 in range(p0, P):
             print(p0, p1, b._std_basis_vec(p0, p1))
     print(P * (P+1) / 2)
-    
+
     # std_basis_Cvec
