@@ -1,0 +1,22 @@
+import cartoon_scenarios, seasonal_anim, secular_anim, het_vel_anim, comparison
+
+params = {
+    'P': 30,
+    'interval': 2,
+    'wavelength': 0.056
+}
+
+sample_bias_at = 15
+
+het_vel_params = {
+    'trough_p': 0.2,
+    'trough_vel': -50,
+    'center_p': 0.8,
+    'center_vel': -25,
+}
+
+cartoon_scenarios.run(**params, **het_vel_params)
+seasonal_anim.run(**params)
+secular_anim.run(**params, sample_bias_at=sample_bias_at)
+het_vel_anim.run(**params, **het_vel_params, sample_bias_at=sample_bias_at)
+comparison.run(**params)
