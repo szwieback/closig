@@ -102,6 +102,36 @@ class CutOffRegularizer(Regularizer):
                 _G.shape[-1]) <= tau_max)
         return _G
 
+class SeasonalRegulizer(Regularizer):
+    '''
+        Simulate an SBAS network with bandwith/cutoff/tau_max temporal baseline
+    '''
+
+    def __init__(self):
+        pass
+
+    def regularize(self, G, inplace=False, p=30, bw=4, shift=0):
+        '''
+            Cuts off interferograms that are at multiples of half the period
+            p is the period of the seasonal signal
+            bw is the buffer around th period to KEEP
+        '''
+        _G = G.copy() if not inplace else G
+        P = _G.shape[-1]
+
+        G_mask = np.zeros((P,P), dtype=np.float64)
+        strips = np.arange(0,P +1, p) + shift
+
+        G_mask += np.logical_and(self.distance_from_diagonal(P) <= (0 + bw), self.distance_from_diagonal(P) >= (0 - bw))
+        for strip in strips:
+            if strip >= bw:
+                G_mask += np.logical_and(self.distance_from_diagonal(P) <= (strip + bw), self.distance_from_diagonal(P) >= (strip - bw))
+                
+        G_mask = G_mask >= 1
+
+
+        return _G * G_mask.astype(np.complex64)
+
 
 class Linker():
     @abstractmethod
