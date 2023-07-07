@@ -17,10 +17,15 @@ cmap = get_cmap("cet_CET_L20")
 model = SeasonalVegLayer(n_mean=0.5 - 0.01j, n_std=0, n_amp=0.02,
                             n_t=0, P_year=30, density=2, dcoh=1, h=1, name='Shrubs')
 
-def run(P = 90, interval = 1, model=model, wavelength = 0.056):    
-    model.plot_n(P)
+def run(P = 90, interval = 1, model=model, wavelength = 0.056, seasonal_reg=True):    
+    # model.plot_n(P)
     geom_Cband = Geom(wavelength=wavelength)
     k0 = 2 * geom_Cband.k0 / 1e3
+
+    if seasonal_reg:
+        label = 'shift'
+    else:
+        label = 'cutoff'
 
 
     model.plot_matrices(P) 
@@ -28,8 +33,12 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056):
     C = model.covariance(P, coherence=True)
     G = np.abs(C)
     
-    bws = np.arange(0, 30, interval)
 
+    if seasonal_reg:
+        bws = np.arange(0, 30, interval)
+        # bws = np.arange(1, 16, interval)
+    else:
+        bws = np.arange(0, P, interval)
     stack_adjacency_matrices = np.zeros((len(bws), P, P))
     stack_ph = np.zeros((len(bws), P))
     colors = cmap(np.linspace(0, 1, len(bws)))
@@ -37,7 +46,11 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056):
 
     for i in range(len(bws)):
         # compute cutoff
-        stack_adjacency_matrices[i, :, :] = SeasonalRegulizer().regularize(G, p=30, bw=3, shift=bws[i])
+        if seasonal_reg:
+            stack_adjacency_matrices[i, :, :] = SeasonalRegulizer().regularize(G, p=30, bw=2, shift=bws[i])
+            # stack_adjacency_matrices[i, :, :] = SeasonalRegulizer().regularize(G, p=30, bw=bws[i], shift=15)
+        else:
+            stack_adjacency_matrices[i, :, :] = CutOffRegularizer().regularize(G, tau_max=bws[i])
 
         
         # Compute timeseries solution
@@ -51,9 +64,9 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056):
         rmse[i] = np.sqrt(np.sum(stack_ph[i, :]**2) / P)
 
     # Create two panel figure
-    fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+    fig, ax = plt.subplots(1, 2, figsize=(16, 6))
 
-    im = ax[0].imshow(stack_adjacency_matrices[0, :, :], cmap='gray', interpolation=None, origin='lower')
+    im = ax[0].imshow(stack_adjacency_matrices[0, :, :], cmap='gray', interpolation=None, origin='upper', extent=[-1, P-1, -1, P-1])
     line = ax[1].plot(stack_ph[0, :], markersize=1, color=colors[0], alpha=0.8)
 
     ## Coherence colorbar
@@ -70,7 +83,10 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056):
     divider = make_axes_locatable(ax[1])
     caxls = divider.append_axes('right', size='5%', pad=0.08)
     cbar = fig.colorbar(sm, cax=caxls)
-    cbar.ax.set_title(r'[$\mathrm{shift}$]')
+    if seasonal_reg:
+        cbar.ax.set_title(r'[$\mathrm{shift}$]')
+    else:
+        cbar.ax.set_title(r'[$\mathrm{bw}$]')
     
 
 
@@ -79,13 +95,18 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056):
         # ax[0].spines['left'].set_color(None)
         # ax[0].spines['bottom'].set_color(None)
         ax[0].spines['top'].set_color(None)
-        ax[0].set_xticks(np.arange(0, P+1, 15))
-        ax[0].set_yticks(np.arange(0, P+1, 15))
-        ax[0].set_xlim([0, P-1])
-        ax[0].set_ylim([0, P-1])
 
-        ax[0].set_xticks(np.arange(-.5, P, 1), minor=True)
-        ax[0].set_yticks(np.arange(-.5, P, 1), minor=True)
+        # ax[0].set_xlim([0, P-1])
+        # ax[0].set_ylim([0, P-1])
+        
+        # # ax[0].autoscale(False)
+
+        tickfreq = 15
+        ticks = np.arange(-0.5, P, tickfreq)
+        labels = np.linspace(0, P, len(ticks)).astype(np.int16)
+        ax[0].set_xticks(ticks, labels=labels)
+        ax[0].set_yticks(ticks, labels=labels)
+
         ax[0].grid(which='minor', color='gray', linestyle='-', linewidth=0.1, alpha=0.2)
         ax[0].tick_params(which='minor', bottom=False, left=False)
 
@@ -117,18 +138,18 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056):
     ax[0].set_aspect('equal')
     ani = FuncAnimation(fig, update, frames=np.arange(0, len(bws), 1), init_func=init, blit=False)
     plt.tight_layout()
-    ani.save('./experiments/figures/output/seasonal.mp4', writer='imagemagick', fps=15, dpi=400, codec='h264')
+    ani.save(f'./experiments/figures/output/seasonal_{label}.mp4', writer='imagemagick', fps=15, dpi=400, codec='h264')
     plt.show()
 
 
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(6, 6))
     ax.plot(bws, rmse)
     ax.set_ylabel('RMSE [mm]')
-    ax.set_xlabel('Shift')
+    ax.set_xlabel(f'{label}')
     ax.spines['right'].set_color(None)
     ax.spines['top'].set_color(None)
     plt.tight_layout()
-    plt.savefig('./experiments/figures/output/seasonal_shift_rmse.png', dpi=300)
+    plt.savefig(f'./experiments/figures/output/seasonal_{label}_rmse.png', dpi=300)
     plt.show()
 
 

@@ -1,3 +1,6 @@
+# output folder
+./scripts/output/**/*
+./experiments/figures/output/**/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
