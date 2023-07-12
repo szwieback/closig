@@ -80,6 +80,7 @@ class CovModel():
         num = self._covariance_element(p0, p1, geom=geom)
         denom = np.sqrt(
             self._covariance_element(p0, p0, geom=geom) * self._covariance_element(p1, p1, geom=geom))
+        # assert denom > num, 'Coherence should be less than or equal to 1.0'
         return num / denom
 
     def covariance(self, P, coherence=False, displacement_phase=False, geom=None, subset=None):
@@ -299,7 +300,7 @@ class HomogSoilLayer(Layer):
         # does not account for displacement because phase reference is at top of layer
         coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
         C01 = np.sqrt(self._intensity(p0) * self._intensity(p1)) * coh
-        return C01
+        return C01 #* np.exp(1j * self._displacement_phase(p0, p1, geom=geom))
 
     def _displacement_phase(self, p0, p1, geom=None):
         # absolute phase without x component
@@ -447,7 +448,7 @@ class SeasonalVegLayer(ScattLayer):
         Seasonally periodic scattering layer corresponding to changes in vegetation refractive index.
         The refractive index is modeled as a complex number with a mean, annual amplitude, and trend.
         The trend is modeled as a linear change in the mean refractive index per year.
-        The annual amplitude is modeled as a sinusoid with a period of P_year days.
+        The annual amplitude is modeled as a cosine with period of P_year days.
         The mean refractive index is modeled as a sinusoid with a period of P_year days.
     '''
 

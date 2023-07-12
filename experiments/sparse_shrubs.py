@@ -15,10 +15,6 @@ shrubs_a = SeasonalVegLayer(n_mean=1.5 - 0.01j, n_std=0, n_amp=0,
 shrubs_b = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0, n_amp=0.2,
                             n_t=0, P_year=30, density=0.1, dcoh=1, h=0.1, name='Shrubs')
 
-# shrubs_b = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0, n_amp=0,
-#                             n_t=0.1, P_year=30, density=0.05, dcoh=1, h=0.2, name='Shrubs')
-
-
 # Tile shrub layers together
 
 model = TiledCovModel([shrubs_a, shrubs_b], fractions=[

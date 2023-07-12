@@ -11,13 +11,15 @@ import numpy as np
 P = 60
 P_year = 30
 dz = -0.5 * 0.05 / P_year
-center = HomogSoilLayer(dz=dz/2)
-trough = HomogSoilLayer(dz=dz)
+center = HomogSoilLayer(dz=dz/2, dcoh=0.99, coh0=0.9)
+trough = HomogSoilLayer(dz=dz, dcoh=0.99, coh0=0.9)
 fractions = [0.8, 0.2]
 model_disc = TiledCovModel([center, trough], fractions=fractions)
 model_cont = ContHetDispModel(
     means=[dz/2, dz], stds=[2e-4, 1e-4], weights=fractions, hist=True)
 
+
+model_cont.plot_matrices(P)
 
 for model, name in zip([model_disc, model_cont], ['Discrete', 'Continuous']):
 
@@ -33,8 +35,12 @@ for model, name in zip([model_disc, model_cont], ['Discrete', 'Continuous']):
 
     taus = [2, 5, 10, 20, 30, 40, 45, 60]
     colors = plt.cm.viridis(np.linspace(0, 1, len(taus)))
-    G = np.abs(model.covariance(P, coherence=True, displacement_phase=True))
-    pl_true = EVD().link(model.covariance(P, coherence=True, displacement_phase=True), G=G)
+    C = model.covariance(P, coherence=True, displacement_phase=True)
+
+    pl_true = EVD().link(C, G=np.abs(C))
+
+
+
 
     for tau, color in zip(taus, colors):
         G = np.abs(model.covariance(P, coherence=True))
