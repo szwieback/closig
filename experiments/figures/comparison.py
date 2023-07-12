@@ -12,7 +12,7 @@ scenarioNames = ['Heterogeneous Velocity', 'Secular Dielectric']
 base_path = './experiments/figures/output'
 
 
-def plot_rawerror(wavelength=0.056):
+def plot_rawerror(wavelength=0.056, suffix=''):
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
     scatter_styles = ['x', 'o']
     alphas = [1, 0.1]
@@ -31,15 +31,18 @@ def plot_rawerror(wavelength=0.056):
             baselines = baselines[gtzero]
             errors = errors[order][gtzero]
             errors = np.unwrap(errors)
+            errors *= ((4 * np.pi)/ (wavelength * 1e3))
 
-            ax.plot(baselines, errors, marker=scatter_styles[i], alpha=alphas[i],
+            ax.plot(baselines/30, errors, marker=scatter_styles[i], alpha=alphas[i],
                     label=f'{scenarioNames[i]}', color=colors[i])
         else:
-            ax.scatter(baselines[baselines > 0], errors[baselines > 0], 30, marker=scatter_styles[i], alpha=alphas[i],
+            errors *= ((4 * np.pi)/ (wavelength * 1e3))
+
+            ax.scatter(baselines[baselines > 0]/30, errors[baselines > 0], 30, marker=scatter_styles[i], alpha=alphas[i],
                     label=f'{scenarioNames[i]}', color=colors[i])
             
         ax.set_ylabel('Deformation Error [$\mathrm{mm}$]', fontsize=fontsize)
-        ax.set_xlabel('Temporal Baseline [$\mathrm{days}$]', fontsize=fontsize)
+        ax.set_xlabel('Temporal Baseline [$\mathrm{years}$]', fontsize=fontsize)
         ax.legend(loc='best', fontsize=fontsize, framealpha=0.2)
 
     ax.spines['top'].set_visible(False)
@@ -48,11 +51,11 @@ def plot_rawerror(wavelength=0.056):
     ax.tick_params(axis='both', which='major', labelsize=fontsize)
     plt.tight_layout()
     plt.savefig(
-        './experiments/figures/output/absolute_error.png', dpi=300, transparent=True)
+        f'./experiments/figures/output/absolute_error{suffix}.png', dpi=300, transparent=True)
     plt.show()
 
 
-def plot_maxb():
+def plot_maxb(suffix=''):
     fontsize = 13
     fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
     bws = np.load(os.path.join(base_path, 'bws.npy'))
@@ -69,6 +72,7 @@ def plot_maxb():
         ax.plot(bws/30, bias, linestyles[i],
                 label=f'{scenarioNames[i]}', color=colors[i], linewidth=4)
 
+    ax.axhline(0, alpha=0.6, color='gray')
     ax.legend(loc='best', fontsize=fontsize)
     ax.set_xlabel(r'Maximum Temporal Baseline [$\mathrm{yr}$]', fontsize=fontsize)
     ax.set_ylabel(r'Bias [$\mathrm{mm}/\mathrm{yr}$]', fontsize=fontsize)
@@ -82,13 +86,13 @@ def plot_maxb():
     plt.tight_layout()
 
     plt.savefig(
-        './experiments/figures/output/bias_rate.png', dpi=300, transparent=True)
+        f'./experiments/figures/output/bias_rate{suffix}.png', dpi=300, transparent=True)
     plt.show()
 
 
-def run(P = 90, interval=1, wavelength=0.056):
-    plot_maxb()
-    plot_rawerror(wavelength=wavelength)
+def run(P = 90, interval=1, wavelength=0.056, suffix=''):
+    plot_maxb(suffix=suffix)
+    plot_rawerror(wavelength=wavelength, suffix=suffix)
 
 if __name__ == '__main__':
     run()

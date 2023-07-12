@@ -17,7 +17,7 @@ cmap = get_cmap("cet_CET_L20")
 model = SeasonalVegLayer(n_mean=0.5 - 0.01j, n_std=0, n_amp=0.02,
                             n_t=0, P_year=30, density=2, dcoh=1, h=1, name='Shrubs')
 
-def run(P = 90, interval = 1, model=model, wavelength = 0.056, seasonal_reg=True):    
+def run(P = 90, interval = 1, model=model, wavelength = 0.056, seasonal_reg=True, suffix=''):    
     # model.plot_n(P)
     geom_Cband = Geom(wavelength=wavelength)
     k0 = 2 * geom_Cband.k0 / 1e3
@@ -30,7 +30,7 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056, seasonal_reg=True
 
     model.plot_matrices(P) 
     
-    C = model.covariance(P, coherence=True)
+    C = model.covariance(P, coherence=True, geom=geom_Cband)
     G = np.abs(C)
     
 
@@ -55,9 +55,6 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056, seasonal_reg=True
         
         # Compute timeseries solution
         cov_cut = C * stack_adjacency_matrices[i, :, :]
-
-        # plt.imshow(np.angle(cov_cut), cmap=plt.cm.seismic)
-        # plt.show()
 
         pl_evd = EVD().link(cov_cut, G=stack_adjacency_matrices[i, :, :])
         stack_ph[i, :] = np.unwrap(np.angle(pl_evd)) / k0
@@ -92,15 +89,7 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056, seasonal_reg=True
 
     def set_matrix_styles():
         ax[0].spines['right'].set_color(None)
-        # ax[0].spines['left'].set_color(None)
-        # ax[0].spines['bottom'].set_color(None)
         ax[0].spines['top'].set_color(None)
-
-        # ax[0].set_xlim([0, P-1])
-        # ax[0].set_ylim([0, P-1])
-        
-        # # ax[0].autoscale(False)
-
         tickfreq = 15
         ticks = np.arange(-0.5, P, tickfreq)
         labels = np.linspace(0, P, len(ticks)).astype(np.int16)
@@ -138,7 +127,7 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056, seasonal_reg=True
     ax[0].set_aspect('equal')
     ani = FuncAnimation(fig, update, frames=np.arange(0, len(bws), 1), init_func=init, blit=False)
     plt.tight_layout()
-    ani.save(f'./experiments/figures/output/seasonal_{label}.mp4', writer='imagemagick', fps=15, dpi=400, codec='h264')
+    ani.save(f'./experiments/figures/output/seasonal_{label}{suffix}.mp4', writer='imagemagick', fps=15, dpi=400, codec='h264')
     plt.show()
 
 
@@ -149,7 +138,7 @@ def run(P = 90, interval = 1, model=model, wavelength = 0.056, seasonal_reg=True
     ax.spines['right'].set_color(None)
     ax.spines['top'].set_color(None)
     plt.tight_layout()
-    plt.savefig(f'./experiments/figures/output/seasonal_{label}_rmse.png', dpi=300)
+    plt.savefig(f'./experiments/figures/output/seasonal_{label}{suffix}_rmse.png', dpi=300)
     plt.show()
 
 

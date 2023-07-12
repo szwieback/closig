@@ -18,12 +18,10 @@ def dielectric_cartoons(P = 90):
     axs[0].legend(loc='upper left', fontsize=20)
     axs[0].set_title('Secular Trend')
 
-
-
     epsilon = np.cos((x / 30) * 2 * np.pi)
     epsilon_i = epsilon/10
     epsilon += b
-    epsilon_i +=b
+    epsilon_i +=9
 
 
     axs[1].plot(x, epsilon, linewidth=3, color=linecolor, label=r'$\epsilon_r$')
@@ -90,7 +88,7 @@ def heterogenous_vel_cartoon(trough_vel = 200, center_vel = 50, N = 10000, troug
 
 
 
-def run(P = 90, interval=1, wavelength=0.056, trough_vel=200, center_vel=50, trough_p=0.2, center_p=0.8):
+def run(P = 90, interval=1, wavelength=0.056, trough_vel=200, center_vel=50, trough_p=0.2, center_p=0.8, suffix=''):
     dielectric_cartoons(P = P)
     heterogenous_vel_cartoon(trough_vel=trough_vel, center_vel=center_vel, trough_p=trough_p, center_p=center_p)
 

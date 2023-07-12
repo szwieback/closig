@@ -178,7 +178,7 @@ class TwoHopBasis(Basis):
         if cutoff is not None:
             indices = [triplet for triplet in indices if np.max(
                 triplet) < cutoff]
-        return indices
+        return np.array(indices)
 
     @staticmethod
     def _h(ptau):
