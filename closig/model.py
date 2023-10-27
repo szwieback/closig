@@ -6,13 +6,7 @@ Created on Jan 5, 2023
 import numpy as np
 from abc import abstractmethod
 from cmath import exp
-from matplotlib import pyplot as plt
-import closig.visualization.model_diagram as md
-import closig.visualization.covariance as cov_vis
-from closig.expansion import SmallStepBasis, TwoHopBasis
-import seaborn as sns
 # from closig.linking import EMI
-
 
 def coherence_model(p0, p1, dcoh, coh0=0.0):
     if p0 == p1:
@@ -22,17 +16,16 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
     return coh
 
 
-def precipitation(f, tau, L=1000):
+def soil_moisture_precip(f, tau, unit_filter_length=20, L=1000):
     '''
-        Generate a normalized precipitation timeseries for input into various models
+        Generate a normalized soil moisture timeseries fed by uniformly spaced precipitation pulses 
     '''
     impulses = np.zeros(L)
     impulses[5] = 1
     impulses[5::f] = 1
-
     # Exponential decay
-    N = 20 / tau
-    kernel = np.exp(-1 * np.arange(0, N) * tau)
+    filter_length = int(unit_filter_length // tau) 
+    kernel = np.exp(-1 * np.arange(0, filter_length) * tau)
     return np.convolve(impulses, kernel)
 
 
@@ -127,9 +120,11 @@ class CovModel():
         }
 
     def plot_diagram(self, **kwargs):
+        from closig.visualization import model_diagram as md
         md.illustrate_model(self.get_layer_details(), **kwargs)
 
     def plot_matrices(self, P, coherence=True, displacement_phase=False, **kwargs):
+        from closig.visualization import covariance as cov_vis
         cov_vis.plot_matrices(self.covariance(
             P, coherence=coherence, displacement_phase=displacement_phase), **kwargs)
 
@@ -140,7 +135,8 @@ class CovModel():
 
 class LayeredCovModel(CovModel):
     '''
-    In-series, layered, composition of covariance models. Topmost layer comes first, last layer determines displacement.
+    In-series, layered, composition of covariance models. 
+    Topmost layer comes first, last layer determines displacement.
     No reflection at interface
     '''
 
@@ -182,7 +178,9 @@ class ContHetDispModel(CovModel):
         This is akin to the old heterogenous velocity simulations - Rowan
     '''
 
-    def __init__(self, means=[], stds=[], weights=[0.5, 0.5], hist=False, L=500, dcoh=0.9, coh0=0.0, seed=678, name=''):
+    def __init__(
+            self, means=[], stds=[], weights=[0.5, 0.5], L=500, dcoh=0.9, coh0=0.0, 
+            seed=678, name=''):
         self.means = means
         self.stds = stds
         self.dcoh = dcoh
@@ -195,10 +193,6 @@ class ContHetDispModel(CovModel):
             rng = np.random.default_rng(self.seed)
             self.velocities = np.concatenate((self.velocities, rng.normal(loc=mean,
                                                                           scale=std, size=N)))
-        if hist:
-            sns.kdeplot(self.velocities * 1000, bw_adjust=0.5)
-            plt.xlabel('dz')
-            plt.show()
         self.name = name
 
     def _transmissivity(self, p, geom=None):
@@ -274,7 +268,8 @@ class TiledCovModel(Layer):
 
 class HomogSoilLayer(Layer):
     '''
-        Represents a single layer of homogenous soil with time invariant dielctric properties. Used to for modeling displacements of the soil rather than changes of the soil.
+        Represents a single layer of homogenous soil with time invariant dielctric properties. 
+        Used for modeling displacements of the soil rather than changes of the soil.
     '''
 
     def __init__(self, intens=1.0, dcoh=0.9, coh0=0.0, dz=0.0, name='Homogeonous Soil'):
@@ -350,7 +345,8 @@ class ScattLayer(Layer):
 
 class ScattSoilLayer(ScattLayer):
     '''
-        Scattering layer corresponding to changes in soil refractive index. Unlike other models, this requires the user to input the dielectric.
+        Scattering layer corresponding to changes in soil refractive index.
+        Parameterized by refractive index
     '''
 
     def __init__(self, n, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
@@ -367,7 +363,8 @@ class ScattSoilLayer(ScattLayer):
 
 class LohmanLayer(CovModel):
     '''
-        From Lohman & Burgi 2023, phase closure errors are modeled as a result of a guassian distribution of sensitivity to soil moisture. For an exponential(1, 1) distribution of s, phi = arctan(Delta mv)
+        From Lohman & Burgi 2023, phase closure errors are modeled as a result of a Gaussian distribution 
+        of sensitivity to soil moisture. For an exponential(1, 1) distribution of s, phi = arctan(Delta mv)
     '''
 
     def __init__(self, mv, mean=1, var=1, L=500, dcoh=0.5, coh0=0.0, seed=678):
@@ -381,6 +378,8 @@ class LohmanLayer(CovModel):
         self.s = rng.exponential(scale=var, size=L)
 
     def plot_s(self):
+        import matplotlib.pyplot as plt
+        import seaborn as sns
         sns.kdeplot(self.s, bw_adjust=0.5)
         plt.xlabel('s')
         plt.ylabel('Density')
@@ -397,27 +396,21 @@ class LohmanLayer(CovModel):
 
 class LohmanPrecipLayer(LohmanLayer):
     def __init__(self, f, tau, mean=1, var=1, dcoh=0.5, coh0=0, L=500):
-        mv = precipitation(f, tau) * 5 + 30
+        mv = soil_moisture_precip(f, tau) * 5 + 30
         super(LohmanPrecipLayer, self).__init__(
             mv, mean=mean, var=var, L=L, dcoh=dcoh, coh0=coh0)
-
-    def plot_mv(self, P):
-        plt.plot(self.mv[:P])
-        plt.xlabel('t')
-        plt.ylabel(r'mv [$m^3/m^3$]')
-        plt.show()
 
 
 class PrecipScatterSoilLayer(ScattSoilLayer):
     '''
         Scattering layer based on repeated impulse wetting but expoential drying of the soil surface.
-        f: frequency of precipitation
+        f: frequency of soil_moisture_precip
         tau: time constant of exponential drying
         dz: displacement of soil surface
     '''
 
     def _generate_n(self, f, tau, offset=0.1, scale=0.05, seed=678):
-        n_real = precipitation(f, tau, self.max_p) * scale + offset
+        n_real = soil_moisture_precip(f, tau, self.max_p) * scale + offset
         rng = np.random.default_rng(seed)
         n_noise = rng.normal(loc=0, scale=0, size=n_real.shape)
         # How do we decide on realistic values of n and how does the imaginary part vary?
@@ -435,6 +428,7 @@ class PrecipScatterSoilLayer(ScattSoilLayer):
         return self.n[p]
 
     def plot_n(self, P):
+        import matplotlib.pyplot as plt
         assert P < self.max_p, f"P must be less than {self.max_p}"
         plt.plot(self.n.real[:P], '-', label='real', color='black')
         plt.plot(-1 * self.n.imag[:P], '--', label='-1 * imag', color='black')
@@ -480,53 +474,4 @@ class SeasonalVegLayer(ScattLayer):
 
 
 if __name__ == '__main__':
-    # geom = Geom(0.6, wavelength=0.2)
-    # n = 1.0 - 0.001j
-    # vl = ScattLayer([n, 1.2 - 0.001j, 2 - 0.02j, 1.2 - 0.02j, 3 - 0.02j, 5 - 0.04j, 1.2 - 0.001j, 3 - 0.005j],
-    #                 density=0.03, dcoh=1, h=0.2)
-    # t = vl._transmissivity(0, geom=geom)
-    # sl = HomogSoilLayer(dcoh=0.9)
-    # m = LayeredCovModel([vl, sl])
-    # plt.imshow(np.abs(m.covariance(8)), vmin=0, vmax=1, cmap='viridis')
-    # plt.imshow(np.angle(m.covariance(8)), vmin=-
-    #            np.pi, vmax=np.pi, cmap='seismic')
-
-    # # plot the angle of the covariance matrix with a diverging colormap alongside the magnitude with two subplots
-    # fig, (ax1, ax2) = plt.subplots(1, 2)
-
-    # im1 = ax1.imshow(np.abs(m.covariance(8, coherence=True,
-    #                                      displacement_phase=True)), vmin=0, vmax=1, cmap='viridis')
-    # im2 = ax2.imshow(np.angle(m.covariance(8, coherence=True,
-    #                                        displacement_phase=True)), vmin=-
-    #                  np.pi, vmax=np.pi, cmap='seismic')
-    # plt.show()
-    # create a model with a seasonal vegetation layer
-    shrubs = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0.0001, n_amp=0.1,
-                              n_t=0.5, P_year=30, density=0.01, dcoh=0.9, h=0.05, name='Shrubs')
-
-    canopy = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0.0001, n_amp=0.2,
-                              n_t=0.5, P_year=30, density=0.01, dcoh=0.9, h=0.5, name='Canopy')
-
-    center = HomogSoilLayer(dz=-0.01, dcoh=1, name='Center')
-    trough = HomogSoilLayer(dz=-0.02, dcoh=1, name='Trough')
-    disp = TiledCovModel([center, trough], fractions=[
-        0.8, 0.2], name='Heterogenous Displacement')
-    layered = LayeredCovModel([shrubs, canopy])
-
-    fig, ax = plt.subplots(nrows=1, ncols=4)
-
-    layered.plot_diagram(ax=ax[0])
-    layered.plot_matrices(
-        10, coherence=True, displacement_phase=False, ax=[ax[1], ax[2]])
-
-    # Compute closure phases for each basis
-    P = 10
-    smallStep = SmallStepBasis(P)
-    closure_phases = smallStep.evaluate_covariance(layered.covariance(P))
-    from scripts.plotting import triangle_plot
-    triangle_plot(smallStep, closure_phases, ax=ax[3])
-
-    plt.show()
-
-    # plt.imshow(np.abs(pm.covariance(2)), vmin=0, vmax=1, cmap='viridis')
-    # plt.show()
+    pass
