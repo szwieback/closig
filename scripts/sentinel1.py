@@ -10,31 +10,39 @@ p0 = Path('/home/simon/Work/closig/stacks')
 pfig = Path('/home/simon/Work/closig/figures')
 
 
-from closig.expansion import SmallStepBasis, TwoHopBasis
-from plotting import triangle_plot, prepare_figure
-import matplotlib.pyplot as plt
+from closig import SmallStepBasis, TwoHopBasis
+from closig.visualization import triangle_plot, prepare_figure
+from matplotlib import colors
+import colorcet as cc
 
+cmap = cc.cm['CET_C1']
+cmap_clipped = colors.LinearSegmentedColormap.from_list('clipped', cmap(np.linspace(0.2, 0.8, 256)))
 
 def plot_triangles(roi, p0, pfig):
+    
     fns = p0 / f'{roi}.npy'
     pfig.mkdir(exist_ok=True)
     Cvec = np.moveaxis(np.load(fns), 0, -1)
     N = int(-1 / 2 + np.sqrt((1 / 4) + 2 * Cvec.shape[-1]))
     bases = {'small steps': SmallStepBasis(N), 'two hops': TwoHopBasis(N)}
-    vabs = {'small steps': 180, 'two hops': 180}
+    vabs = {'small steps': 180, 'two hops': 45}
+    cmaps = {'small steps': cmap, 'two hops': cmap_clipped}
     fig, axs = prepare_figure(
-        ncols=2, figsize=(1.00, 0.44), left=0.12, right=0.98, top=1.00, bottom=0.14, wspace=0.18)
+        ncols=2, figsize=(1.20, 0.44), left=0.10, right=0.87, top=1.00, bottom=0.14, wspace=0.50)
     for jbase, basename in enumerate(bases):
         b, ax = bases[basename], axs[jbase]
         cclosures = b.evaluate_covariance(Cvec, normalize=True, compl=True, vectorized=True)
-        triangle_plot(b, np.mean(cclosures, axis=(1, 2)), ax=ax, vabs=vabs[basename])
+        triangle_plot(b, np.mean(cclosures, axis=(1, 2)), ax=ax, vabs=vabs[basename], cmap=cmaps[basename])
         ax.text(0.50, 1.05, basename, ha='center', va='baseline', transform=ax.transAxes)
-        ax.text(0.50, -0.32, 'time $t$ [scene]', ha='center', va='baseline', transform=ax.transAxes)
-    axs[0].set_ylabel('time scale $\\tau$ [scene]')
-    plt.savefig(pfig / f'{roi}.pdf')
+        ax.text(0.50, -0.34, 'time $t$ [scene]', ha='center', va='baseline', transform=ax.transAxes)
+    axs[0].text(
+        -0.20, 0.50, 'time scale $\\tau$ [scene]', ha='right', va='center', transform=axs[0].transAxes, 
+        rotation=90)
+    print(pfig / f'{roi}.pdf')
+    fig.savefig(pfig / f'{roi}.pdf', dpi=450)
     
 if __name__ == '__main__':
     rois = ['Colorado_rocky', 'Colorado_mountains', 'Colorado_grass', 'Colorado_fields']
-    rois = ['NewMexico_dissected', 'NewMexico_flat', 'NewMexico_mountain', 'NewMexico_eroded']    
+    # rois = ['NewMexico_dissected', 'NewMexico_flat', 'NewMexico_mountain', 'NewMexico_eroded']    
     for roi in rois:
         plot_triangles(roi, p0, pfig)

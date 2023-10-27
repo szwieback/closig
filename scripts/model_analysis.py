@@ -9,10 +9,10 @@ def model_catalogue(scenario, P_year=30):
     from closig.model import (
         LayeredCovModel, TiledCovModel, HomogSoilLayer, SeasonalVegLayer, Geom)
     geom = Geom(theta=30 * np.pi / 180, wavelength=0.24)
-    h = 0.5
-    n_mean = 1.30 - 0.005j
-    n_amp = 0.10 - 0.002j
-    n_std = 0.01
+    h = 0.4
+    n_mean = 1.05 - 0.0010j
+    n_amp = 0.01 - 0.0002j
+    n_std = 0.002
     if scenario == 'diffdisp':
         dz = -0.5 * geom.wavelength / P_year # half a wavelength
         coh0 = 0.6
@@ -60,27 +60,26 @@ def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
         model = models[nm]
         for jb, nb in enumerate(bases):
             basis = bases[nb]
-            N = basis.P
+            P = basis.P
             if len(cclosures) == 0:
-                C = model.covariance(N, displacement_phase=False)
+                C = model.covariance(P, displacement_phase=False)
                 cclosures['closures'] = basis.evaluate_covariance(C, compl=True)
-                C0 = model.covariance(N, displacement_phase=True)
+                C0 = model.covariance(P, displacement_phase=True)
                 dC = C * C0.conj() / np.abs(C0)
                 cclosures['short_error'] = basis.evaluate_covariance(dC, compl=True, forward_only=True)
             triangle_plot(
                 basis, cclosures['closures'], ax=axs[0][jm][jb], ticks=ticks, ticklabels=ticklabels,
                 show_xticklabels=False, show_yticklabels=(jb == 0), blabel=nb, plabel=jplot, vabs=vabs,
-                cmap=cmap)
+                cmap=cmap, cbar=False)
             axs[1][jm][jb].text(
                 0.50, -0.47, '$t$ [years]', transform=axs[1][jm][jb].transAxes, ha='center', va='baseline')
             triangle_plot(
                 basis, cclosures['short_error'], ax=axs[1][jm][jb], ticks=ticks, ticklabels=ticklabels,
-                show_yticklabels=(jb == 0), plabel=jplot + 1, cmap=cmap, vabs=vabs)
+                show_yticklabels=(jb == 0), plabel=jplot + 1, cmap=cmap, vabs=vabs, cbar=False)
             jplot = jplot + 2
             cclosures = {}
 
     cax = fig.add_axes((0.928, 0.300, 0.015, 0.400))
-    # cbar = fig.colorbar(im, cax=cax, orientation='horizontal')
     cbar = fig.colorbar(cm.ScalarMappable(norm=Normalize(-vabs, vabs, clip=True), cmap=cmap), cax=cax)
     cbar.set_ticks([-180, -90, 0, 90, 180])
     cbarlabel = 'phase [$^{\\circ}$]'
@@ -94,7 +93,9 @@ def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
             -0.50, 0.50, rowlabels[jax], rotation=90, transform=ax.transAxes, ha='right', va='center',
             c='k')
     if fnout is not None:
-        plt.savefig(fnout)
+        fig.savefig(fnout, dpi=450)
+    else:
+        plt.show()
 
 if __name__ == '__main__':
     from closig.expansion import TwoHopBasis, SmallStepBasis
