@@ -81,10 +81,12 @@ if __name__ == '__main__':
     ticks = np.array([0, 30, 60, 90]) + 1
     ticklabels = [0, 1, 2, 3]
     bases = {'t': TwoHopBasis(P), 's': SmallStepBasis(P)}
-    scennames = ['diffdisp', 'seasonalveg', 'seasonaltrendveg']
+    scennames = ['diffdisp', 'seasonalveg', 'seasonaltrendveg', 'precipsoil']
     m = [model_catalog(scenname, P_year=P_year) for scenname in scennames]
     models = {
         'differential subsidence': m[0], 'seasonal vegetation': m[1], 'seasonal vegetation + trend': m[2]}
+    models = {
+        'differential subsidence': m[0], 'soil': m[3], 'seasonal vegetation': m[1]}    
     fnout = '/home/simon/Work/closig/figures/model.pdf'
     double_plot(bases, models, fnout=fnout, ticks=ticks, ticklabels=ticklabels)
 

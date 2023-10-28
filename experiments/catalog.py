@@ -7,7 +7,7 @@ import numpy as np
 
 def model_catalog(scenario, P_year=30):
     from closig.model import (
-        LayeredCovModel, TiledCovModel, HomogSoilLayer, SeasonalVegLayer, Geom)
+        LayeredCovModel, TiledCovModel, HomogSoilLayer, SeasonalVegLayer, Geom, PrecipScatterSoilLayer)
     geom = Geom(theta=30 * np.pi / 180, wavelength=0.24)
     h = 0.4
     n_mean = 1.05 - 0.0010j
@@ -25,6 +25,9 @@ def model_catalog(scenario, P_year=30):
             n_mean=n_mean, n_amp=n_amp, n_std=n_std, n_t=n_t, density=1/h, dcoh=0.6, P_year=P_year, h=h)
         sl = HomogSoilLayer()
         model = LayeredCovModel([svl, sl])
+    elif scenario == 'precipsoil':
+        model = PrecipScatterSoilLayer(
+            f=10, tau=1, dcoh=0.99, coh0=0, offset=0.1, scale=0.1)
     else:
         raise ValueError(f"Scenario {scenario} not known")
     return model
