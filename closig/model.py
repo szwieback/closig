@@ -16,13 +16,12 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
     return coh
 
 
-def soil_moisture_precip(f, tau, unit_filter_length=20, L=1000):
+def soil_moisture_precip(f, tau, unit_filter_length=20, P0=5, P=1000):
     '''
         Generate a normalized soil moisture timeseries fed by uniformly spaced precipitation pulses 
     '''
-    impulses = np.zeros(L)
-    impulses[5] = 1
-    impulses[5::f] = 1
+    impulses = np.zeros(P)    
+    impulses[P0::f] = 1
     # Exponential decay
     filter_length = int(unit_filter_length // tau) 
     kernel = np.exp(-1 * np.arange(0, filter_length) * tau)
@@ -410,14 +409,14 @@ class PrecipScatterSoilLayer(ScattSoilLayer):
     '''
 
     def _generate_n(self, f, tau, offset=0.1, scale=0.05, seed=678):
-        n_real = soil_moisture_precip(f, tau, self.max_p) * scale + offset
+        n_real = soil_moisture_precip(f, tau, P = self.max_P) * scale + offset
         rng = np.random.default_rng(seed)
         n_noise = rng.normal(loc=0, scale=0, size=n_real.shape)
         # How do we decide on realistic values of n and how does the imaginary part vary?
         return (n_real + n_noise) - 1j * n_real/10
 
     def __init__(self, f=10, tau=0.5, offset=0.1, scale=0.1, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
-        self.max_p = 1000
+        self.max_P = 1000
         n = self._generate_n(f, tau, offset=offset, scale=scale)
         super(ScattSoilLayer, self).__init__(
             n, density=density, dcoh=dcoh, coh0=coh0, h=None)
