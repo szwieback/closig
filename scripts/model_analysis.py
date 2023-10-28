@@ -3,34 +3,9 @@ Created on Jan 19, 2023
 
 @author: simon
 '''
-import numpy as np
-
-def model_catalogue(scenario, P_year=30):
-    from closig.model import (
-        LayeredCovModel, TiledCovModel, HomogSoilLayer, SeasonalVegLayer, Geom)
-    geom = Geom(theta=30 * np.pi / 180, wavelength=0.24)
-    h = 0.4
-    n_mean = 1.05 - 0.0010j
-    n_amp = 0.01 - 0.0002j
-    n_std = 0.002
-    if scenario == 'diffdisp':
-        dz = -0.5 * geom.wavelength / P_year # half a wavelength
-        coh0 = 0.6
-        center = HomogSoilLayer(dz=0.00, coh0=coh0)
-        trough = HomogSoilLayer(dz=dz, coh0=coh0)
-        model = TiledCovModel([center, trough], fractions=[0.8, 0.2])
-    elif scenario in ('seasonalveg', 'seasonaltrendveg'):
-        n_t = {'seasonalveg': 0.0, 'seasonaltrendveg': 0.1 - 0.002j}[scenario]
-        svl = SeasonalVegLayer(
-            n_mean=n_mean, n_amp=n_amp, n_std=n_std, n_t=n_t, density=1/h, dcoh=0.6, P_year=P_year, h=h)
-        sl = HomogSoilLayer()
-        model = LayeredCovModel([svl, sl])
-    else:
-        raise ValueError(f"Scenario {scenario} not known")
-    return model
 
 def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
-    from scripts.plotting import triangle_plot, prepare_figure, initialize_matplotlib
+    from closig.visualization import triangle_plot, prepare_figure, initialize_matplotlib
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
     from matplotlib import cm
@@ -99,18 +74,17 @@ def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
 
 if __name__ == '__main__':
     from closig.expansion import TwoHopBasis, SmallStepBasis
+    from experiments.catalog import model_catalog
+    import numpy as np
     P = 91
     P_year = 30
     ticks = np.array([0, 30, 60, 90]) + 1
     ticklabels = [0, 1, 2, 3]
     bases = {'t': TwoHopBasis(P), 's': SmallStepBasis(P)}
     scennames = ['diffdisp', 'seasonalveg', 'seasonaltrendveg']
-    m = [model_catalogue(scenname, P_year=P_year) for scenname in scennames]
+    m = [model_catalog(scenname, P_year=P_year) for scenname in scennames]
     models = {
         'differential subsidence': m[0], 'seasonal vegetation': m[1], 'seasonal vegetation + trend': m[2]}
     fnout = '/home/simon/Work/closig/figures/model.pdf'
     double_plot(bases, models, fnout=fnout, ticks=ticks, ticklabels=ticklabels)
 
-    # to do: show sensitivity to single phase difference
-    # spatial plots of tau=1 year closure phases
-    # try normalization based on intensity(geom. mean)
