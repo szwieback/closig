@@ -4,6 +4,7 @@ Created on Oct 27, 2023
 @author: simon
 '''
 import numpy as np
+
 def model_catalog(scenario, P_year=30):
     from closig.model import (
         LayeredCovModel, TiledCovModel, HomogSoilLayer, SeasonalVegLayer, Geom)

@@ -4,7 +4,7 @@
 '''
 from closig.model import TiledCovModel, HomogSoilLayer, Geom, ContHetDispModel
 from closig.expansion import SmallStepBasis, TwoHopBasis
-from scripts.plotting import triangle_plot
+from closig.visualization import triangle_plot
 from matplotlib import pyplot as plt
 from closig.linking import EMI, EMI_py, CutOffRegularizer, NearestNeighbor, EVD
 import numpy as np

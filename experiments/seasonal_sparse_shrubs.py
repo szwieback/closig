@@ -3,7 +3,7 @@
 '''
 from closig.model import SeasonalVegLayer, HomogSoilLayer, LayeredCovModel, TiledCovModel, ContHetDispModel, ScattSoilLayer
 from closig.expansion import SmallStepBasis, TwoHopBasis
-from scripts.plotting import triangle_plot
+from closig.visualization import triangle_plot
 from matplotlib import pyplot as plt
 from closig.linking import EMI, EMI_py, CutOffRegularizer, NearestNeighbor, EVD
 import numpy as np
@@ -90,6 +90,4 @@ plt.show()
 
     Error is largest in interferograms with temporal baselines of quarter of the period.
     Smallest errors are in the interferograms with baselines 0, 30, and 60
-
-
 '''

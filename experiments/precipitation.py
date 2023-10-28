@@ -3,7 +3,7 @@
 '''
 from closig.model import PrecipScatterSoilLayer
 from closig.expansion import SmallStepBasis, TwoHopBasis
-from scripts.plotting import triangle_plot
+from closig.visualization import triangle_plot
 from matplotlib import pyplot as plt
 from closig.linking import EMI, EMI_py, CutOffRegularizer, NearestNeighbor, EVD
 import numpy as np
@@ -12,7 +12,7 @@ import numpy as np
 # Tile shrub layers together
 
 model = PrecipScatterSoilLayer(
-    f=20, tau=1, dcoh=0.99, coh0=0, offset=0.1, scale=0.1)
+    f=10, tau=1, dcoh=0.99, coh0=0, offset=0.1, scale=0.1)
 
 
 # Analysis & Plotting
@@ -29,10 +29,11 @@ smallStep = SmallStepBasis(P)
 twoHop = TwoHopBasis(P)
 c_phases_ss = smallStep.evaluate_covariance(
     model.covariance(P), compl=True, normalize=False)
+print(f'Mean Closure Phase: {np.angle(c_phases_ss).mean()}')
+print(c_phases_ss.shape)
 
 c_phases_th = twoHop.evaluate_covariance(
     model.covariance(P), compl=True, normalize=False)
-print(f'Mean Closure Phase: {np.angle(c_phases_ss).mean()}')
 
 triangle_plot(smallStep, c_phases_ss,
               ax=ax[1, 1], cmap=plt.cm.seismic, vabs=180)
