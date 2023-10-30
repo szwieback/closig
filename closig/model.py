@@ -103,7 +103,7 @@ class CovModel():
         if subset is not None:
             return C * subset
         else:
-            return C
+            return C.astype(np.complex128)
 
     def get_baselines(self, P):
         mg = np.mgrid[0:P, 0:P]

@@ -33,9 +33,8 @@ class Subsetter():
     '''
 
     def __init__(self, P, max_tau=5):
+        self.P = P
         self.max_tau = max_tau
-
-        pass
 
     def subset_random(self, G, seed=None):
         '''
@@ -43,8 +42,8 @@ class Subsetter():
             returns instance of self
         '''
         k = np.random.uniform(high=1, low=0.5, size=1, seed=seed)
-        l = np.random.uniform(high=n-2, low=1, size=1, seed=seed)
-        G, A = graphs.get_rand_graph(n, k=k, l=l)
+        l = np.random.uniform(high=self.P-2, low=1, size=1, seed=seed)
+        G, A = graphs.get_rand_graph(self.P, k=k, l=l)
         self.G = G
         return self
 
@@ -92,14 +91,14 @@ class CutOffRegularizer(Regularizer):
         pass
 
     def regularize(self, G, inplace=False, tau_max=None):
-        _G = G.copy() if not inplace else G
+        _G = G.copy().astype(np.float64) if not inplace else G
         if tau_max is not None:
-            slicetup = (None,) * (len(_G) - 2) + (Ellipsis,)
             if _G.shape[-2] != _G.shape[-1]:
                 raise ValueError(
                     f"Expected G of shape (..., P, P) but got {_G.shape}")
             _G *= (self.distance_from_diagonal(
                 _G.shape[-1]) <= tau_max)
+            force_doubly_nonnegative(_G, inplace=True)
         return _G
 
 
