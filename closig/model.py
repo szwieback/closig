@@ -6,12 +6,13 @@ Created on Jan 5, 2023
 import numpy as np
 from abc import abstractmethod
 from cmath import exp
-# from closig.linking import EMI
 
 def coherence_model(p0, p1, dcoh, coh0=0.0):
     if p0 == p1:
         coh = 1.0
     else:
+        if dcoh > 1 - coh0:
+            raise ValueError("Incompatible dcoh and coh0")
         coh = (dcoh) ** (abs(p1 - p0)) + coh0
     return coh
 
@@ -56,7 +57,8 @@ class CovModel():
         Parent covariance model
     '''
     @abstractmethod
-    def __init__(self):
+    def __init__(self, geom=None):
+        self.geom = geom
         pass
 
     @abstractmethod
@@ -84,7 +86,7 @@ class CovModel():
         '''
         C = np.zeros((P, P), dtype=np.complex64)
         for p0 in range(P):
-            C[p0, p0] = self._covariance_element(p0, p0)
+            C[p0, p0] = self._covariance_element(p0, p0, geom=geom)
             for p1 in range(p0, P):
                 if not coherence:
                     C01 = self._covariance_element(p0, p1, geom=geom)
@@ -129,7 +131,10 @@ class CovModel():
 
     @ property
     def _default_geom(self):
-        return Geom()
+        if self.geom is not None:
+            return self.geom
+        else:
+            return Geom()
 
 
 class LayeredCovModel(CovModel):
@@ -139,20 +144,25 @@ class LayeredCovModel(CovModel):
     No reflection at interface
     '''
 
-    def __init__(self, layers):
+    def __init__(self, layers, geom=None):
         self.layers = layers
+        self.geom = geom
 
     def _cumulative_transmissivity(self, p, geom=None):
+        if geom is None:
+            geom = self._default_geom
         t = np.array([l._transmissivity(p, geom=geom) for l in self.layers])
         return np.cumprod(t)
 
     def _propagation_phasor(self, p0, p1, geom=None):
+        if geom is None:
+            geom = self._default_geom
         t0 = self._cumulative_transmissivity(p0, geom=geom)
         t1 = self._cumulative_transmissivity(p1, geom=geom)
         tc = t0 * t1.conj()
         return np.concatenate((np.array([1.0]), tc))
 
-    def _displacement_phase(self, p0, p1, geom=None):
+    def _displacement_phase(self, p0, p1, geom=None):        
         if geom is None:
             geom = self._default_geom
         return self.layers[-1]._displacement_phase(p0, p1, geom=geom)
@@ -179,13 +189,14 @@ class ContHetDispModel(CovModel):
 
     def __init__(
             self, means=[], stds=[], weights=[0.5, 0.5], L=500, dcoh=0.9, coh0=0.0, 
-            seed=678, name=''):
+            seed=678, name='', geom=None):
         self.means = means
         self.stds = stds
         self.dcoh = dcoh
         self.coh0 = coh0
         self.velocities = np.zeros(0)
         self.seed = seed
+        self.geom = geom
         assert np.sum(weights) == 1  # weights must sum to 1
         for mean, std, weight in zip(means, stds, weights):
             N = (int(L * weight))
@@ -227,13 +238,13 @@ class Layer(CovModel):
         pass
 
 
-class TiledCovModel(Layer):
+class TiledModel(CovModel):
     '''
         In-parallel, single layer, composition of covariance models.
         Represents a weighted sum of adjacent physical processes.
     '''
 
-    def __init__(self, covmodels, fractions=None, name=''):
+    def __init__(self, covmodels, fractions=None, name='', geom=None):
         self.covmodels = covmodels
         # array of area fractions (sums to 1)
         self.fractions = fractions if fractions is not None else np.ones(
@@ -241,6 +252,7 @@ class TiledCovModel(Layer):
         assert np.all(np.isclose(np.sum(self.fractions), 1)
                       ), 'Fractions must sum to 1.'
         self.name = name
+        self.geom = geom
 
     def _displacement_phase(self, p0, p1, geom=None):
         if geom is None:
@@ -257,7 +269,7 @@ class TiledCovModel(Layer):
         cdphases = np.array(
             [exp(1j * cm._displacement_phase(p0, p1, geom=geom)) for cm in self.covmodels])
         return np.sum(self.fractions * covs * cdphases)
-
+        
     def get_tile_details(self):
         return {
             'covmodels': [cov.name for cov in self.covmodels],
@@ -275,8 +287,6 @@ class HomogSoilLayer(Layer):
         self.intens = intens  # array or scalar
         self.dcoh = dcoh  # coherence model: gamma_ij= | i - j | ** dcoh + coh0
         self.coh0 = coh0
-        # z displacement between adjacent acquisitions [uplift positive for (earlier)(later)*]
-        # change this to a vector to account for temporally varying subsidence
         self.dz = dz
         self.name = name
 
@@ -330,8 +340,6 @@ class ScattLayer(Layer):
         return self.n[p]
 
     def _covariance_element(self, p0, p1, geom=None):
-        if geom is None:
-            geom = self._default_geom
         coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
         dens_eff = self.density * coh
         n_p0, n_p1 = self._n(p0), self._n(p1)
@@ -355,8 +363,6 @@ class ScattSoilLayer(ScattLayer):
 
     def _displacement_phase(self, p0, p1, geom=None):
         # absolute phase without x component
-        if geom is None:
-            geom = self._default_geom
         return geom.phase_from_dz(self.dz, p0, p1)
 
 

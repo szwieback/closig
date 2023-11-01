@@ -1,7 +1,7 @@
 '''
     Simulating a semi-arid environment with sparse shrubbery with seasonal moisture content
 '''
-from closig.model import SeasonalVegLayer, HomogSoilLayer, LayeredCovModel, TiledCovModel, ContHetDispModel, ScattSoilLayer
+from closig.model import SeasonalVegLayer, HomogSoilLayer, LayeredCovModel, TiledModel, ContHetDispModel, ScattSoilLayer
 from closig.expansion import SmallStepBasis, TwoHopBasis
 from closig.visualization import triangle_plot
 from matplotlib import pyplot as plt
@@ -21,7 +21,7 @@ shrubs_b = SeasonalVegLayer(n_mean=1.2 - 0.01j, n_std=0, n_amp=0.2,
 
 # Tile shrub layers together
 
-model = TiledCovModel([shrubs_a, shrubs_b], fractions=[
+model = TiledModel([shrubs_a, shrubs_b], fractions=[
     0.6, 0.4], name='Shrubs')
 
 # Analysis & Plotting

@@ -1,21 +1,30 @@
-
-from closig.model import TiledCovModel, HomogSoilLayer, Geom
-
 from matplotlib import pyplot as plt
-from closig.linking import CutOffRegularizer, EVD
 import numpy as np
+from abc import abstractmethod
+
+from closig import CutOffRegularizer, EVD, TiledModel, HomogSoilLayer, Geom
+
+class Experiment():
+    @abstractmethod
+    def __init__(self):
+        pass
+    
+class CutOffExperiment(Experiment):
+    def __init__(self, model, dps):
+        self.dps = dps
 
 P = 90
 P_year = 30
 geom = Geom(theta=30*np.pi/180, wavelength=0.05)
 
 
-dz = -0.15 * geom.wavelength / P_year
+dz = -0.05 / P_year
 coh0 = 0.3 # expect phase linking error to increase with coh0 for tau >> 1
-center = HomogSoilLayer(dz=0, coh0=coh0)
-trough = HomogSoilLayer(dz=dz, coh0=coh0)
+dcoh = 0.6
+center = HomogSoilLayer(dz=0, coh0=coh0, dcoh=dcoh)
+trough = HomogSoilLayer(dz=dz, coh0=coh0, dcoh=dcoh)
 fractions = [0.75, 0.25]
-model = TiledCovModel([center, trough], fractions=fractions)
+model = TiledModel([center, trough], fractions=fractions, geom=geom)
 
 # error = model.covariance(P, coherence=True, displacement_phase=False) * (
 #     model.covariance(P, coherence=True, displacement_phase=True).conj())
@@ -26,16 +35,22 @@ model = TiledCovModel([center, trough], fractions=fractions)
 # plt.ylabel('Error [rad]')
 # plt.show()
 
-dps = [2, 15, 30, 45, 60, 90]
+dps = [1, 15, 30, 45, 60, 90]
 colors = plt.cm.viridis(np.linspace(0, 1, len(dps)))
-pl_true = EVD().link(model.covariance(P, coherence=True, displacement_phase=True))
-
+Cd = model.covariance(P, coherence=True, displacement_phase=True)
+pld = EVD().link(Cd)
 C = model.covariance(P, coherence=True, displacement_phase=False)
-G0 = np.abs(C)
+print(np.angle(C[0, :5]))
+print(np.angle(Cd[0, :5]))
+# print(model._covariance_element(0, 1))
+# print(model._covariance_element(0, 2))
+# print(model._covariance_element(0, 3))
+# print(model._covariance_element(0, 4))
+
 
 for dp, color in zip(dps, colors):
     pl_evd = EVD(CutOffRegularizer(dp)).link(C)
-    plt.plot(np.angle(pl_evd * pl_true.conj()),
+    plt.plot(np.angle(pl_evd * pld.conj()),
              label=f'dp: {dp}', color=color)
 
 plt.legend(loc='best')

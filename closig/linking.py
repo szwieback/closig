@@ -85,7 +85,7 @@ class CutOffRegularizer(Regularizer):
     def __init__(self, dp_cutoff=None):
         self.dp_cutoff = dp_cutoff
 
-    def regularize(self, G, inplace=False, dp_cutoff=None):
+    def regularize(self, G, inplace=False):
         if self.dp_cutoff is None:
             _G = G
         else:
