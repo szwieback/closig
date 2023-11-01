@@ -56,10 +56,13 @@ class CovModel():
     '''
         Parent covariance model
     '''
+
     @abstractmethod
-    def __init__(self, geom=None):
+    def __init__(self, geom=None, name=None):
         self.geom = geom
-        pass
+        if name is None:
+            name = self.class_name
+        self.name = name
 
     @abstractmethod
     # s0 * conj(s1)
@@ -107,14 +110,24 @@ class CovModel():
         else:
             return C.astype(np.complex128)
 
-    def get_baselines(self, P):
+    @classmethod
+    def baselines(cls, P):
         mg = np.mgrid[0:P, 0:P]
         return mg[1] - mg[0]
 
-    def get_layer_details(self):
-        return self.get_tile_details()
+    @property
+    def class_name(self):
+        return 'covariance model'
 
-    def get_tile_details(self):
+    def __repr__(self):
+        return str(self.layer_details) 
+    
+    @property
+    def layer_details(self):
+        return self.tile_details
+
+    @property
+    def tile_details(self):
         return {
             'covmodels': [self.name],
             'fractions': [1],
@@ -122,7 +135,7 @@ class CovModel():
 
     def plot_diagram(self, **kwargs):
         from closig.visualization import model_diagram as md
-        md.illustrate_model(self.get_layer_details(), **kwargs)
+        md.illustrate_model(self.layer_details, **kwargs)
 
     def plot_matrices(self, P, coherence=True, displacement_phase=False, **kwargs):
         from closig.visualization import covariance as cov_vis
@@ -144,9 +157,12 @@ class LayeredCovModel(CovModel):
     No reflection at interface
     '''
 
-    def __init__(self, layers, geom=None):
+    def __init__(self, layers, geom=None, name=None):
         self.layers = layers
         self.geom = geom
+        if name is None:
+            name = self.class_name
+        self.name = name
 
     def _cumulative_transmissivity(self, p, geom=None):
         if geom is None:
@@ -177,19 +193,24 @@ class LayeredCovModel(CovModel):
         cov = np.sum(covs_ind * phasors[:-1]) * exp(1j * dphase)
         return cov
 
-    def get_layer_details(self):
-        return {l.name: l.get_tile_details() for l in self.layers}
+    @property
+    def class_name(self):
+        return 'layered covariance model'
+
+    @property
+    def layer_details(self):
+        return [l.tile_details for l in self.layers]
 
 
 class ContHetDispModel(CovModel):
     ''''
-        Represents a continous distribution of displacements within a single model block
+        Represents a continuous distribution of displacements within a single model block
         This is akin to the old heterogenous velocity simulations - Rowan
     '''
 
     def __init__(
             self, means=[], stds=[], weights=[0.5, 0.5], L=500, dcoh=0.9, coh0=0.0, 
-            seed=678, name='', geom=None):
+            seed=678, name=None, geom=None):
         self.means = means
         self.stds = stds
         self.dcoh = dcoh
@@ -203,16 +224,16 @@ class ContHetDispModel(CovModel):
             rng = np.random.default_rng(self.seed)
             self.velocities = np.concatenate((self.velocities, rng.normal(loc=mean,
                                                                           scale=std, size=N)))
+        if name is None:
+            name = self.class_name
         self.name = name
-
+        
     def _transmissivity(self, p, geom=None):
         return 0.0
 
     def _displacement_phase(self, p0, p1, geom=None):
         if geom is None:
             geom = self._default_geom
-        coh = coherence_model(p0, p1, self.dcoh, coh0=self.coh0)
-
         return geom.phase_from_dz(np.mean(self.velocities), p0, p1)
 
     def _covariance_element(self, p0, p1, geom=None):
@@ -226,6 +247,9 @@ class ContHetDispModel(CovModel):
         phases = np.exp(1j * geom.phase_from_dz(self.velocities, p0, p1)) * coh
         return np.mean(phases)
 
+    @property
+    def class_name(self):
+        return 'continuously distributed displacement model'
 
 class Layer(CovModel):
 
@@ -244,15 +268,17 @@ class TiledModel(CovModel):
         Represents a weighted sum of adjacent physical processes.
     '''
 
-    def __init__(self, covmodels, fractions=None, name='', geom=None):
+    def __init__(self, covmodels, fractions=None, name=None, geom=None):
         self.covmodels = covmodels
         # array of area fractions (sums to 1)
         self.fractions = fractions if fractions is not None else np.ones(
             len(covmodels)) / len(covmodels)
         assert np.all(np.isclose(np.sum(self.fractions), 1)
                       ), 'Fractions must sum to 1.'
-        self.name = name
         self.geom = geom
+        if name is None:
+            name = self.class_name
+        self.name = name        
 
     def _displacement_phase(self, p0, p1, geom=None):
         if geom is None:
@@ -270,25 +296,31 @@ class TiledModel(CovModel):
             [exp(1j * cm._displacement_phase(p0, p1, geom=geom)) for cm in self.covmodels])
         return np.sum(self.fractions * covs * cdphases)
         
-    def get_tile_details(self):
+    @property
+    def tile_details(self):
         return {
             'covmodels': [cov.name for cov in self.covmodels],
             'fractions': self.fractions,
         }
 
+    @property
+    def class_name(self):
+        return 'tiled covariance model'
 
 class HomogSoilLayer(Layer):
     '''
-        Represents a single layer of homogenous soil with time invariant dielctric properties. 
+        Represents a single layer of homogenous soil with time invariant dielectric properties. 
         Used for modeling displacements of the soil rather than changes of the soil.
     '''
 
-    def __init__(self, intens=1.0, dcoh=0.9, coh0=0.0, dz=0.0, name='Homogeonous Soil'):
+    def __init__(self, intens=1.0, dcoh=0.9, coh0=0.0, dz=0.0, name=None):
         self.intens = intens  # array or scalar
         self.dcoh = dcoh  # coherence model: gamma_ij= | i - j | ** dcoh + coh0
         self.coh0 = coh0
         self.dz = dz
-        self.name = name
+        if name is None:
+            name = self.class_name
+        self.name = name        
 
     def _transmissivity(self, p, geom=None):
         return 0.0
@@ -311,16 +343,23 @@ class HomogSoilLayer(Layer):
             geom = self._default_geom
         return geom.phase_from_dz(self.dz, p0, p1)
 
-
+    @property
+    def class_name(self):
+        return 'homogeneous soil layer'
+    
+    
 class ScattLayer(Layer):
     def __init__(
-            self, n, density=1.0, dcoh=0.5, coh0=0.0, h=0.4):
+            self, n, density=1.0, dcoh=0.5, coh0=0.0, h=0.4, name=None):
         # refractive index array (engineering sign convention: nr - j ni)
         self.n = n
         self.density = density  # dcross section/dz; time invariant
         self.dcoh = dcoh
         self.coh0 = coh0
         self.h = h  # canopy height/layer depth [None: infinity]
+        if name is None:
+            name = self.class_name
+        self.name = name        
 
     def _transmissivity(self, p, geom=None):
         # amplitude; uses exp(i(-kx+wt)) sign convention
@@ -349,6 +388,9 @@ class ScattLayer(Layer):
         c01 = 1j * dens_eff / (2 * dkzc) * (1 - phasor_bottom)
         return c01
 
+    @property
+    def class_name(self):
+        return 'scattering layer'
 
 class ScattSoilLayer(ScattLayer):
     '''
@@ -356,15 +398,21 @@ class ScattSoilLayer(ScattLayer):
         Parameterized by refractive index
     '''
 
-    def __init__(self, n, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
+    def __init__(self, n, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0, name=None):
         super(ScattSoilLayer, self).__init__(
             n, density=density, dcoh=dcoh, coh0=coh0, h=None)
         self.dz = dz
+        if name is None:
+            name = self.class_name
+        self.name = name        
 
     def _displacement_phase(self, p0, p1, geom=None):
         # absolute phase without x component
         return geom.phase_from_dz(self.dz, p0, p1)
 
+    @property
+    def class_name(self):
+        return 'scattering soil layer'
 
 class LohmanLayer(CovModel):
     '''
@@ -372,7 +420,7 @@ class LohmanLayer(CovModel):
         of sensitivity to soil moisture. For an exponential(1, 1) distribution of s, phi = arctan(Delta mv)
     '''
 
-    def __init__(self, mv, mean=1, var=1, L=500, dcoh=0.5, coh0=0.0, seed=678):
+    def __init__(self, mv, mean=1, var=1, L=500, dcoh=0.5, coh0=0.0, seed=678, name=None):
         self.mv = mv
         self.mean = mean
         self.var = var
@@ -381,7 +429,10 @@ class LohmanLayer(CovModel):
         self.seed = seed
         rng = np.random.default_rng(self.seed)
         self.s = rng.exponential(scale=var, size=L)
-
+        if name is None:
+            name = self.class_name
+        self.name = name
+        
     def plot_s(self):
         import matplotlib.pyplot as plt
         import seaborn as sns
@@ -398,12 +449,15 @@ class LohmanLayer(CovModel):
         phases = np.exp(1j * (self.mv[p1] - self.mv[p0]) * self.s)
         return coh * np.mean(phases)
 
+    @property
+    def class_name(self):
+        return 'Lohman layer'
 
 class LohmanPrecipLayer(LohmanLayer):
-    def __init__(self, f, tau, mean=1, var=1, dcoh=0.5, coh0=0, L=500):
+    def __init__(self, f, tau, mean=1, var=1, dcoh=0.5, coh0=0, L=500, name=None):
         mv = soil_moisture_precip(f, tau) * 5 + 30
         super(LohmanPrecipLayer, self).__init__(
-            mv, mean=mean, var=var, L=L, dcoh=dcoh, coh0=coh0)
+            mv, mean=mean, var=var, L=L, dcoh=dcoh, coh0=coh0, name=name)
 
 
 class PrecipScatterSoilLayer(ScattSoilLayer):
@@ -421,13 +475,17 @@ class PrecipScatterSoilLayer(ScattSoilLayer):
         # How do we decide on realistic values of n and how does the imaginary part vary?
         return (n_real + n_noise) - 1j * n_real/10
 
-    def __init__(self, f=10, tau=0.5, offset=0.1, scale=0.1, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0):
+    def __init__(
+            self, f=10, tau=0.5, offset=0.1, scale=0.1, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0, name=None):
         self.max_P = 1000
         n = self._generate_n(f, tau, offset=offset, scale=scale)
         super(ScattSoilLayer, self).__init__(
             n, density=density, dcoh=dcoh, coh0=coh0, h=None)
         self.dz = dz
-
+        if name is None:
+            name = self.class_name
+        self.name = name
+        
     def _n(self, p):
         assert p < self.max_P, f"p must be less than {self.max_P}"
         return self.n[p]
@@ -452,7 +510,7 @@ class SeasonalVegLayer(ScattLayer):
 
     def __init__(
             self, n_mean=None, n_std=0.0, n_amp=0.0, n_t=0.0, P_year=30, density=1.0, h=0.4,
-            dcoh=0.5, coh0=0.0, seed=678, name='Seasonal Vegetation'):
+            dcoh=0.5, coh0=0.0, seed=678, name=None):
         super(SeasonalVegLayer, self).__init__(
             None, density=density, dcoh=dcoh, coh0=coh0, h=h)
         if n_mean is None:
@@ -464,7 +522,10 @@ class SeasonalVegLayer(ScattLayer):
         self.P_year = P_year
         self.seed = seed
         self.name = name
-
+        if name is None:
+            name = self.class_name
+        self.name = name
+        
     def _n(self, p):
         '''
             Compute refractive index at time p.
@@ -477,6 +538,9 @@ class SeasonalVegLayer(ScattLayer):
         n = self.n_mean + self.n_amp * costerm + p / self.P_year * self.n_t + n_random
         return complex(n.real - 1j * n.real/100)
 
+    @property
+    def class_name(self):
+        return 'seasonal vegetation layer'
 
 if __name__ == '__main__':
     pass
