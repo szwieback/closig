@@ -3,13 +3,6 @@ Created on Jan 20, 2023
 
 @author: simon
 
-A standard workflow for a linking experiment is as follows:
-    > Construct model
-    > Set P
-    > Compute Covariance (P)
-    > Regularize
-    > Subset
-    > EMI
 '''
 from abc import abstractmethod
 import closig.graphs as graphs
@@ -25,11 +18,13 @@ def restrict_kwargs(fun, kwargs):
 
 class Subsetter():
     '''
-        Subset a modeled covariance matrix given a maximum temporal baseline, or random sampling based on a graph representation of the InSAR network. This simulates an SBAS scenario where temporal baseline dependent velocity errors may arrise. 
+        Subset a modeled covariance matrix given a maximum temporal baseline, or random sampling based 
+        on a graph representation of the InSAR network. This simulates an SBAS scenario where temporal baseline dependent velocity errors may arrise. 
 
         This is a binary and stack-wise operation, thus it is distinct from the regularizer.
 
-        Not working yet, but the idea is to genrate random adjaceny matrices to test whether redunancy is key driver of velocity biases.
+        Not working yet, but the idea is to genrate random adjaceny matrices to test whether redunancy 
+        is key driver of velocity biases.
     '''
 
     def __init__(self, P, max_tau=5):
@@ -84,20 +79,22 @@ class IdleRegularizer(Regularizer):
 
 class CutOffRegularizer(Regularizer):
     '''
-        Simulate an SBAS network with bandwith/cutoff/tau_max temporal baseline
+        Simulate an SBAS network with bandwith/cutoff dp_cutoff (dp: scene difference)
     '''
 
-    def __init__(self):
-        pass
+    def __init__(self, dp_cutoff=None):
+        self.dp_cutoff = dp_cutoff
 
-    def regularize(self, G, inplace=False, tau_max=None):
-        _G = G.copy().astype(np.float64) if not inplace else G
-        if tau_max is not None:
+    def regularize(self, G, inplace=False, dp_cutoff=None):
+        if self.dp_cutoff is None:
+            _G = G
+        else:
+            _G = G.copy().astype(np.float64) if not inplace else G
             if _G.shape[-2] != _G.shape[-1]:
                 raise ValueError(
                     f"Expected G of shape (..., P, P) but got {_G.shape}")
             _G *= (self.distance_from_diagonal(
-                _G.shape[-1]) <= tau_max)
+                _G.shape[-1]) <= self.dp_cutoff)
             force_doubly_nonnegative(_G, inplace=True)
         return _G
 
@@ -105,7 +102,7 @@ class CutOffRegularizer(Regularizer):
 class Linker():
     @abstractmethod
     def __init__(self):
-        pass
+        self.regularizer = IdleRegularizer()
 
     def test_square(self, C):
         C_shape = C.shape
@@ -136,13 +133,16 @@ class Linker():
         # C_obs, G of shape (N, P, P)
         pass
 
-    def estimate_G(self, C_obs, tau_max=None):
+    def estimate_G(self, C_obs, **kwargs):
         G = np.abs(C_obs).real
-        if tau_max is not None:
-            self._regularize_G(G, tau_max=tau_max)
-        G = force_doubly_nonnegative(G, inplace=True)
+        if self.regularizer is not None:
+            G = self._regularize_G(G, **kwargs)
+        else:
+            G = force_doubly_nonnegative(G, inplace=True)
         return G
 
+    def _regularize_G(self, G, **kwargs):
+        return self.regularizer.regularize(G, **kwargs)
 
 class EMI(Linker):
     def __init__(self, regularizer=None):
@@ -150,9 +150,6 @@ class EMI(Linker):
             self.regularizer = regularizer
         else:
             self.regularizer = IdleRegularizer()
-
-    def _regularize_G(self, G, **kwargs):
-        return self.regularizer.regularize(G, **kwargs)
 
     def _link(self, C_obs, G):
         from greg import EMI as _EMI
@@ -165,9 +162,6 @@ class EMI_py(EMI):
             self.regularizer = regularizer
         else:
             self.regularizer = IdleRegularizer()
-
-    def _regularize_G(self, G, **kwargs):
-        return self.regularizer.regularize(G, **kwargs)
 
     def _link(self, C_obs, G=None):
         from greg.linking import EMI_py as _EMI

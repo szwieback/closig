@@ -26,18 +26,17 @@ model = TiledCovModel([center, trough], fractions=fractions)
 # plt.ylabel('Error [rad]')
 # plt.show()
 
-taus = [2, 15, 30, 45, 60, 90]
-colors = plt.cm.viridis(np.linspace(0, 1, len(taus)))
+dps = [2, 15, 30, 45, 60, 90]
+colors = plt.cm.viridis(np.linspace(0, 1, len(dps)))
 pl_true = EVD().link(model.covariance(P, coherence=True, displacement_phase=True))
 
 C = model.covariance(P, coherence=True, displacement_phase=False)
 G0 = np.abs(C)
 
-for tau, color in zip(taus, colors):
-    G = CutOffRegularizer().regularize(G0, tau_max=tau)
-    pl_evd = EVD().link(C, G=G)
+for dp, color in zip(dps, colors):
+    pl_evd = EVD(CutOffRegularizer(dp)).link(C)
     plt.plot(np.angle(pl_evd * pl_true.conj()),
-             label=f'tau: {tau}', color=color)
+             label=f'dp: {dp}', color=color)
 
 plt.legend(loc='best')
 plt.xlabel('t')
