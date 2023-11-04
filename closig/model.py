@@ -11,9 +11,7 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
     if p0 == p1:
         coh = 1.0
     else:
-        if dcoh > 1 - coh0:
-            raise ValueError("Incompatible dcoh and coh0")
-        coh = (dcoh) ** (abs(p1 - p0)) + coh0
+        coh = coh0 + (1 - coh0) * dcoh ** (abs(p0 - p1)) 
     return coh
 
 

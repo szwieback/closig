@@ -2,7 +2,7 @@
     How does velocity bias depend on mixing of subsidence signals?
     This is also a comparison of the discrete vs continuous models
 '''
-from closig.model import TildedModel, HomogSoilLayer, Geom, ContHetDispModel
+from closig.model import TiledModel, HomogSoilLayer, Geom, ContHetDispModel
 from closig.expansion import SmallStepBasis, TwoHopBasis
 from closig.visualization import triangle_plot
 from matplotlib import pyplot as plt
@@ -14,7 +14,7 @@ dz = -0.5 * 0.05 / P_year
 center = HomogSoilLayer(dz=dz/2)
 trough = HomogSoilLayer(dz=dz)
 fractions = [0.8, 0.2]
-model_disc = TildedModel([center, trough], fractions=fractions)
+model_disc = TiledModel([center, trough], fractions=fractions)
 model_cont = ContHetDispModel(
     means=[dz/2, dz], stds=[2e-4, 1e-4], weights=fractions, hist=True)
 
