@@ -11,12 +11,10 @@ pfig = Path('/home/simon/Work/closig/figures')
 
 
 from closig import SmallStepBasis, TwoHopBasis
-from closig.visualization import triangle_plot, prepare_figure
+from closig.visualization import triangle_plot, prepare_figure, cmap_clipped, cmap_cyclic
 from matplotlib import colors
 import colorcet as cc
 
-cmap = cc.cm['CET_C1']
-cmap_clipped = colors.LinearSegmentedColormap.from_list('clipped', cmap(np.linspace(0.2, 0.8, 256)))
 
 def plot_triangles(roi, p0, pfig):
     
@@ -26,7 +24,7 @@ def plot_triangles(roi, p0, pfig):
     N = int(-1 / 2 + np.sqrt((1 / 4) + 2 * Cvec.shape[-1]))
     bases = {'small steps': SmallStepBasis(N), 'two hops': TwoHopBasis(N)}
     vabs = {'small steps': 180, 'two hops': 45}
-    cmaps = {'small steps': cmap, 'two hops': cmap_clipped}
+    cmaps = {'small steps': cmap_cyclic, 'two hops': cmap_clipped}
     fig, axs = prepare_figure(
         ncols=2, figsize=(1.20, 0.44), left=0.10, right=0.87, top=1.00, bottom=0.14, wspace=0.50)
     for jbase, basename in enumerate(bases):

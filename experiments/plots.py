@@ -6,7 +6,7 @@ Created on Nov 6, 2023
 import numpy as np
 import numpy.ma as ma
 
-from closig.visualization import prepare_figure, initialize_matplotlib, colslist
+from closig.visualization import prepare_figure, initialize_matplotlib, colslist, triangle_plot
 
 y_xlab_def = -0.40
 x_ylab_def = -0.18
@@ -15,8 +15,9 @@ def mask_angle(angle):
     angle_arr = ma.array(angle)
     angle_arr[np.concatenate([(False,), angle[1:] * angle[:-1] < -6])] = ma.masked
     return angle_arr
-    
-def phase_error_plot(ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None):
+
+def phase_error_plot(
+        ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, show_xticklabels=True):
     if ax is None:
         _, ax = prepare_figure()
     dp, phe = ex.phase_error()
@@ -27,9 +28,9 @@ def phase_error_plot(ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=Non
     ax.axhline(0.0, c=colslist[-1], lw=0.5, alpha=0.5, zorder=2)
     ax.plot(dp_years, mask_angle_dp, c=col, lw=0.5)
     ax.plot(
-        dp_years[mask_angle_dp.mask], angle_dp[mask_angle_dp.mask], linestyle='none', ms=1, marker='o', 
+        dp_years[mask_angle_dp.mask], angle_dp[mask_angle_dp.mask], linestyle='none', ms=1, marker='o',
         mec='none', mfc=col)
-    
+
     ax.set_ylim((-np.pi, np.pi))
     ax.set_yticks((-np.pi, 0, np.pi))
     ax.set_yticklabels(('$-\\pi$', '0', '$\\pi$'))
@@ -40,10 +41,13 @@ def phase_error_plot(ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=Non
         if x_ylab is None: x_ylab = x_ylab_def
         ax.text(
             x_ylab, 0.50, 'phase error [rad]', transform=ax.transAxes, va='center', ha='right', rotation=90)
+    if not show_xticklabels:
+        ax.set_xticklabels([])
     return ax
 
 def phase_history_bias_plot(
-        ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None):
+        ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None, 
+        show_xticklabels=True):
     if cols is None: cols = [c for c in colslist]
     if ax is None:
         _, ax = prepare_figure()
@@ -53,7 +57,7 @@ def phase_history_bias_plot(
     ax.axhline(0.0, c=colslist[-1], lw=0.5, alpha=0.5, zorder=2)
     ax.set_ylim((-np.pi, np.pi))
     ax.set_yticks((-np.pi, 0, np.pi))
-    ax.set_yticklabels(('$-\\pi$', '0', '$\\pi$'))    
+    ax.set_yticklabels(('$-\\pi$', '0', '$\\pi$'))
     for jdp, phe_dp in enumerate(phe):
         col = cols[jdp]
         angle_dp = np.angle(phe_dp)
@@ -68,6 +72,8 @@ def phase_history_bias_plot(
         if x_ylab is None: x_ylab = x_ylab_def
         ax.text(
             x_ylab, 0.50, 'bias [rad]', transform=ax.transAxes, va='center', ha='right', rotation=90)
+    if not show_xticklabels:
+        ax.set_xticklabels([])        
     return ax
 
 def phase_history_metric_plot(
@@ -95,3 +101,16 @@ def phase_history_metric_plot(
         ax.text(
             x_ylab, 0.50, 'cos metric [-]', transform=ax.transAxes, va='center', ha='right', rotation=90)
     return ax
+
+def triangle_experiment_plot(
+        ex, Basis, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, extent=None,
+        cmap=None, vabs=180, show_xticklabels=True, show_yticklabels=True, aspect=0.75, ticks=None):
+    if ax is None:
+        _, ax = prepare_figure()
+    import colorcet as cc
+    basis, cclosures = ex.basis_closure(Basis, compl=True)
+    if extent is None: extent = (0, (ex.P + 1)/ex.P_year) * 2
+    triangle_plot(
+        basis, cclosures, ax=ax, show_xticklabels=show_xticklabels,
+         show_yticklabels=True, vabs=vabs, cmap=cmap, cbar=False, aspect=aspect, extent=extent, ticks=ticks)
+

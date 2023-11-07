@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import colorcet as cc
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib import colors
 
 globfigparams = {
     'fontsize': 8, 'family': 'serif', 'usetex': True,
@@ -17,6 +18,9 @@ globfigparams = {
     'ticklength': 2.50, 'minorticklength': 1.1}
 
 colslist = ['#2b2d47', '#8a698c', '#b29274', '#aaaaaa', '#dddddd']
+cmap_cyclic = cc.cm['CET_C1']
+cmap_clipped = colors.LinearSegmentedColormap.from_list('clipped', cmap_cyclic(np.linspace(0.2, 0.8, 256)))
+
 
 def initialize_matplotlib():
     plt.rc(

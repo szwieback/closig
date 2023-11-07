@@ -5,13 +5,13 @@ Created on Jan 19, 2023
 '''
 
 def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
-    from closig.visualization import triangle_plot, prepare_figure, initialize_matplotlib
+    from closig.visualization import triangle_plot, prepare_figure, initialize_matplotlib, cmap_cyclic
     import matplotlib.pyplot as plt
     import matplotlib.gridspec as gridspec
     from matplotlib import cm
     from matplotlib.colors import Normalize
     import colorcet as cc
-    cmap, vabs = cc.cm['CET_C1'], 180
+    cmap, vabs = cmap_cyclic, 180
     initialize_matplotlib()
     fig = plt.figure(figsize=(6.5, 1.8))
     w = 5
@@ -73,8 +73,8 @@ def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
         plt.show()
 
 if __name__ == '__main__':
-    from closig.expansion import TwoHopBasis, SmallStepBasis
-    from experiments.catalog import model_catalog
+    from closig import TwoHopBasis, SmallStepBasis
+    from experiments import model_catalog
     import numpy as np
     P = 91
     P_year = 30

@@ -5,16 +5,17 @@ import matplotlib.pyplot as plt
 def real_closures(cclosures):
     return np.angle(cclosures) * 180 / np.pi
 
+from closig.visualization.plotting import cmap_cyclic
 
 def triangle_plot(
         basis, cclosures, cclosures_ref=None, ax=None, osf=4, aspect=0.75, vabs=None, cmap=None,
         vabs_ref=None, ticks=None, ticklabels=None, show_xticklabels=True, show_yticklabels=True,
-        remove_spines=True, blabel=None, plabel=None, show_labels=False, cbar=True):
+        remove_spines=True, blabel=None, plabel=None, show_labels=False, cbar=True, extent=None):
     from scipy.interpolate import griddata
     if ax is None:
         fig, ax = plt.subplot(1, 1)
     if cmap is None:
-        cmap = cc.cm['CET_C1']
+        cmap = cmap_cyclic
     pt, ptau = basis.pt, basis.ptau
     ptr = np.arange(min(pt), max(pt), step=1 / osf)
     ptaur = np.arange(min(ptau), max(ptau), step=0.5 / osf)
@@ -34,19 +35,20 @@ def triangle_plot(
     if vabs is None:
         vabs = np.nanmax(np.abs(closure_grid))
     P = basis.P
-    extent = (1, P + 0.5, 1, P + 0.5)
+    if extent is None: extent = (1, P + 0.5, 1, P + 0.5)
     if ticks is not None:
         ax.set_xticks(ticks)
         ax.set_yticks(ticks)
-        if ticklabels is not None:
-            if show_xticklabels:
-                ax.set_xticklabels(ticklabels)
-            else:
-                ax.set_xticklabels([])
-            if show_yticklabels:
-                ax.set_yticklabels(ticklabels)
-            else:
-                ax.set_yticklabels([])
+    if ticklabels is not None:
+        if show_xticklabels:
+            ax.set_xticklabels(ticklabels)
+        if show_yticklabels:
+            ax.set_yticklabels(ticklabels)
+    if not show_xticklabels:
+        ax.set_xticklabels([])
+    if not show_yticklabels:
+        ax.set_yticklabels([])
+    
     from matplotlib.colors import Normalize
     if cclosures_ref is None:
         norm = Normalize(-vabs, vabs, clip=True)

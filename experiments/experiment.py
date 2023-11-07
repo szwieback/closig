@@ -69,6 +69,13 @@ class Experiment():
         phe = ph * phd.conj() / np.abs(phd)
         return np.arange(len(ph)) - p0, phe
 
+    def basis_closure(self, Basis, C=None, compl=True):
+        if C is None: C = self.C
+        basis = Basis(P=self.P)
+        closures = basis.evaluate_covariance(C, compl=compl)
+        return basis, closures
+
+
 class CutOffExperiment(Experiment):
     def __init__(self, model, dps, P=90, P_year=30):
         self.dps = dps
