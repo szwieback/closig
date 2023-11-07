@@ -8,7 +8,6 @@ from abc import abstractmethod
 import numpy as np
 
 from closig import EVD, CutOffRegularizer
-from greg import circular_normal, covariance_matrix, correlation
 
 class Experiment():
     default_L = 169
@@ -35,7 +34,16 @@ class CutOffExperiment(Experiment):
         self.Cd = model.covariance(P, coherence=True, displacement_phase=True)
         self.C = model.covariance(P, coherence=True)
 
+    def _dp_years(self, dps=None):
+        if dps is None: dps = self.dps
+        return np.array(dps) / self.P_year
+
+    @property
+    def p(self):
+        return np.arange(self.P)
+
     def observed_covariance(self, samples=(1024,), L=None, rng=None, seed=None):
+        from greg import circular_normal, covariance_matrix
         _size = samples + (self._L(L), self.P,)
         C = self.C
         if rng is None: rng = np.random.default_rng(self._seed(seed))
@@ -47,6 +55,7 @@ class CutOffExperiment(Experiment):
         if not corr:
             return C
         else:
+            from greg import correlation
             return correlation(C)
 
     def phase_history_displacement(self, corr=True):
