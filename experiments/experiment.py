@@ -25,23 +25,6 @@ class Experiment():
         _seed = Experiment.default_seed if seed is None else seed
         return _seed
 
-class CutOffExperiment(Experiment):
-    def __init__(self, model, dps, P=90, P_year=30):
-        self.dps = dps
-        self.model = model
-        self.P = P
-        self.P_year = P_year
-        self.Cd = model.covariance(P, coherence=True, displacement_phase=True)
-        self.C = model.covariance(P, coherence=True)
-
-    def _dp_years(self, dps=None):
-        if dps is None: dps = self.dps
-        return np.array(dps) / self.P_year
-
-    @property
-    def p(self):
-        return np.arange(self.P)
-
     def observed_covariance(self, samples=(1024,), L=None, rng=None, seed=None):
         from greg import circular_normal, covariance_matrix
         _size = samples + (self._L(L), self.P,)
@@ -62,14 +45,10 @@ class CutOffExperiment(Experiment):
         Cd = self._correlation_matrix(self.Cd, corr=corr)
         return EVD().link(Cd)
 
-    def phase_history(self, C=None, dps=None, corr=True):
-        if dps is None: dps = self.dps
-        if C is None: C = self.C
-        _C = self._correlation_matrix(C, corr=corr)
-        ph = np.stack([EVD(CutOffRegularizer(dp)).link(_C) for dp in dps], axis=-2)
-        return ph
+
 
     def phase_history_error(self, C=None, dps=None):
+        if C is None: C = self.C
         ph = self.phase_history(C=C, dps=dps)
         phd = self.phase_history_displacement()
         sl = (None,) * (len(ph.shape) - len(phd.shape)) + (Ellipsis,)
@@ -83,8 +62,33 @@ class CutOffExperiment(Experiment):
     def mean_metric(self, error, axis=(0,)):
         return np.angle(np.mean(error, axis=axis))
 
-    def phase_error(self, p0=0):
-        ph = self.C[p0,:]
+    def phase_error(self, C=None, p0=0):
+        if C is None: C = self.C
+        ph = C[p0,:]
         phd = self.Cd[p0,:]
         phe = ph * phd.conj() / np.abs(phd)
         return np.arange(len(ph)) - p0, phe
+
+class CutOffExperiment(Experiment):
+    def __init__(self, model, dps, P=90, P_year=30):
+        self.dps = dps
+        self.model = model
+        self.P = P
+        self.P_year = P_year
+        self.Cd = model.covariance(P, coherence=True, displacement_phase=True)
+        self.C = model.covariance(P, coherence=True)
+
+    def _dp_years(self, dps=None):
+        if dps is None: dps = self.dps
+        return np.array(dps) / self.P_year
+
+    @property
+    def p(self):
+        return np.arange(self.P)
+
+    def phase_history(self, C=None, dps=None, corr=True):
+        if dps is None: dps = self.dps
+        if C is None: C = self.C
+        _C = self._correlation_matrix(C, corr=corr)
+        ph = np.stack([EVD(CutOffRegularizer(dp)).link(_C) for dp in dps], axis=-2)
+        return ph

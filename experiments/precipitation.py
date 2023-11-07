@@ -12,7 +12,7 @@ import numpy as np
 # Tile shrub layers together
 
 model = PrecipScatterSoilLayer(
-    f=10, tau=1, dcoh=0.99, coh0=0, offset=0.1, scale=0.1)
+    f=10, tau=1, dcoh=0.8, coh0=0.2, offset=0.1, scale=0.1)
 
 
 # Analysis & Plotting
