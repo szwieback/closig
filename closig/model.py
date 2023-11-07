@@ -11,21 +11,66 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
     if p0 == p1:
         coh = 1.0
     else:
-        coh = coh0 + (1 - coh0) * dcoh ** (abs(p0 - p1)) 
+        coh = coh0 + (1 - coh0) * dcoh ** (abs(p0 - p1))
     return coh
 
-
-def soil_moisture_precip(f, tau, unit_filter_length=20, P0=5, P=1000):
+def soil_moisture_precip(interval, tau, unit_filter_length=20, P0=5, P=1000, porosity=0.35, residual=0.02):
     '''
-        Generate a normalized soil moisture timeseries fed by uniformly spaced precipitation pulses 
+        Generate a normalized soil moisture timeseries fed by uniformly spaced precipitation pulses
     '''
-    impulses = np.zeros(P)    
-    impulses[P0::f] = 1
+    impulses = np.zeros(P)
+    impulses[P0::interval] = porosity
     # Exponential decay
-    filter_length = int(unit_filter_length // tau) 
+    filter_length = int(unit_filter_length // tau)
     kernel = np.exp(-1 * np.arange(0, filter_length) * tau)
-    return np.convolve(impulses, kernel)
+    sm = np.convolve(impulses, kernel)
+    sm[sm > porosity] = porosity
+    sm[sm < residual] = residual
+    return sm
 
+class DielectricModel():
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def permittivity(self, state):
+        pass
+
+    def n(self, state):
+        return np.sqrt(self.permittivity(state))
+
+class DobsonDielectric(DielectricModel):
+    def __init__(self, porosity=0.35, sand=0.3, clay=0.2, eps_s=4.7):
+        self.sand = sand  # fraction
+        self.clay = clay
+        self.porosity = porosity
+        self.eps_s = eps_s
+        self.alpha = 0.65
+
+    @property
+    def _beta(self):
+        beta_r = 1.2748 - 0.519 * self.sand - 0.152 * self.clay
+        beta_i = 0.0133797 - 0.603 * self.sand - 0.166 * self.clay
+        return beta_r - 1j * beta_i
+
+    @property
+    def _sigma_eff(self):
+        # hard-coded bulk density
+        return 1.645 + 1.939 * 1.7 - 2.013 * self.sand + 1.594 * self.clay
+
+    @property
+    def _eps_fw(self):
+        eps_fw = 78 - 1j * 18  # need to implement debye
+        return eps_fw
+
+    def permittivity(self, state):
+        eps_s_alpha = self.eps_s ** self.alpha
+        beta = self._beta
+        eps_fw_alpha = self._eps_fw ** self.alpha
+        eps_alpha = 1 + (1 - self.porosity) * (eps_s_alpha - 1) + state ** beta * (eps_fw_alpha - 1) - state
+        eps = eps_alpha ** (1 / self.alpha)
+        return eps
 
 class Geom():
     '''
@@ -48,7 +93,6 @@ class Geom():
 
     def phase_from_dz(self, dz, p0, p1):
         return -2 * self.kz() * dz * (p0 - p1)
-
 
 class CovModel():
     '''
@@ -118,8 +162,8 @@ class CovModel():
         return 'covariance model'
 
     def __repr__(self):
-        return str(self.layer_details) 
-    
+        return str(self.layer_details)
+
     @property
     def layer_details(self):
         return self.tile_details
@@ -147,10 +191,9 @@ class CovModel():
         else:
             return Geom()
 
-
 class LayeredCovModel(CovModel):
     '''
-    In-series, layered, composition of covariance models. 
+    In-series, layered, composition of covariance models.
     Topmost layer comes first, last layer determines displacement.
     No reflection at interface
     '''
@@ -176,7 +219,7 @@ class LayeredCovModel(CovModel):
         tc = t0 * t1.conj()
         return np.concatenate((np.array([1.0]), tc))
 
-    def _displacement_phase(self, p0, p1, geom=None):        
+    def _displacement_phase(self, p0, p1, geom=None):
         if geom is None:
             geom = self._default_geom
         return self.layers[-1]._displacement_phase(p0, p1, geom=geom)
@@ -199,7 +242,6 @@ class LayeredCovModel(CovModel):
     def layer_details(self):
         return [l.tile_details for l in self.layers]
 
-
 class ContHetDispModel(CovModel):
     ''''
         Represents a continuous distribution of displacements within a single model block
@@ -207,7 +249,7 @@ class ContHetDispModel(CovModel):
     '''
 
     def __init__(
-            self, means=[], stds=[], weights=[0.5, 0.5], L=500, dcoh=0.9, coh0=0.0, 
+            self, means=[], stds=[], weights=[0.5, 0.5], L=500, dcoh=0.9, coh0=0.0,
             seed=678, name=None, geom=None):
         self.means = means
         self.stds = stds
@@ -225,7 +267,7 @@ class ContHetDispModel(CovModel):
         if name is None:
             name = self.class_name
         self.name = name
-        
+
     def _transmissivity(self, p, geom=None):
         return 0.0
 
@@ -259,7 +301,6 @@ class Layer(CovModel):
     def _transmissivity(self, p, geom=None):
         pass
 
-
 class TiledModel(CovModel):
     '''
         In-parallel, single layer, composition of covariance models.
@@ -276,7 +317,7 @@ class TiledModel(CovModel):
         self.geom = geom
         if name is None:
             name = self.class_name
-        self.name = name        
+        self.name = name
 
     def _displacement_phase(self, p0, p1, geom=None):
         if geom is None:
@@ -293,7 +334,7 @@ class TiledModel(CovModel):
         cdphases = np.array(
             [exp(1j * cm._displacement_phase(p0, p1, geom=geom)) for cm in self.covmodels])
         return np.sum(self.fractions * covs * cdphases)
-        
+
     @property
     def tile_details(self):
         return {
@@ -307,7 +348,7 @@ class TiledModel(CovModel):
 
 class HomogSoilLayer(Layer):
     '''
-        Represents a single layer of homogenous soil with time invariant dielectric properties. 
+        Represents a single layer of homogenous soil with time invariant dielectric properties.
         Used for modeling displacements of the soil rather than changes of the soil.
     '''
 
@@ -318,7 +359,7 @@ class HomogSoilLayer(Layer):
         self.dz = dz
         if name is None:
             name = self.class_name
-        self.name = name        
+        self.name = name
 
     def _transmissivity(self, p, geom=None):
         return 0.0
@@ -344,8 +385,7 @@ class HomogSoilLayer(Layer):
     @property
     def class_name(self):
         return 'homogeneous soil layer'
-    
-    
+
 class ScattLayer(Layer):
     def __init__(
             self, n, density=1.0, dcoh=0.5, coh0=0.0, h=0.4, name=None):
@@ -357,7 +397,7 @@ class ScattLayer(Layer):
         self.h = h  # canopy height/layer depth [None: infinity]
         if name is None:
             name = self.class_name
-        self.name = name        
+        self.name = name
 
     def _transmissivity(self, p, geom=None):
         # amplitude; uses exp(i(-kx+wt)) sign convention
@@ -402,7 +442,7 @@ class ScattSoilLayer(ScattLayer):
         self.dz = dz
         if name is None:
             name = self.class_name
-        self.name = name        
+        self.name = name
 
     def _displacement_phase(self, p0, p1, geom=None):
         # absolute phase without x component
@@ -414,7 +454,7 @@ class ScattSoilLayer(ScattLayer):
 
 class LohmanLayer(CovModel):
     '''
-        From Lohman & Burgi 2023, phase closure errors are modeled as a result of a Gaussian distribution 
+        From Lohman & Burgi 2023, phase closure errors are modeled as a result of a Gaussian distribution
         of sensitivity to soil moisture. For an exponential(1, 1) distribution of s, phi = arctan(Delta mv)
     '''
 
@@ -430,7 +470,7 @@ class LohmanLayer(CovModel):
         if name is None:
             name = self.class_name
         self.name = name
-        
+
     def plot_s(self):
         import matplotlib.pyplot as plt
         import seaborn as sns
@@ -452,38 +492,35 @@ class LohmanLayer(CovModel):
         return 'Lohman layer'
 
 class LohmanPrecipLayer(LohmanLayer):
-    def __init__(self, f, tau, mean=1, var=1, dcoh=0.5, coh0=0, L=500, name=None):
-        mv = soil_moisture_precip(f, tau) * 5 + 30
+    def __init__(self, interval, tau, mean=1, var=1, dcoh=0.5, coh0=0, L=500, name=None):
+        mv = soil_moisture_precip(interval, tau) * 5 + 30
         super(LohmanPrecipLayer, self).__init__(
             mv, mean=mean, var=var, L=L, dcoh=dcoh, coh0=coh0, name=name)
 
-
 class PrecipScatterSoilLayer(ScattSoilLayer):
     '''
-        Scattering layer based on repeated impulse wetting but expoential drying of the soil surface.
-        f: frequency of soil_moisture_precip
+        Scattering layer based on repeated impulse wetting and exponential dry-down.
+        interval: interval of soil_moisture_precip
         tau: time constant of exponential drying
         dz: displacement of soil surface
     '''
 
-    def _generate_n(self, f, tau, offset=0.1, scale=0.05, seed=678):
-        n_real = soil_moisture_precip(f, tau, P = self.max_P) * scale + offset
-        rng = np.random.default_rng(seed)
-        n_noise = rng.normal(loc=0, scale=0, size=n_real.shape)
-        # How do we decide on realistic values of n and how does the imaginary part vary?
-        return (n_real + n_noise) - 1j * n_real/10
+    def _generate_n(self, f, tau):
+        dielModel = DobsonDielectric()
+        state = soil_moisture_precip(f, tau, P=self.max_P) # this should be claned up; max_P superfluous
+        return np.array([dielModel.n(s) for s in state])
 
     def __init__(
-            self, f=10, tau=0.5, offset=0.1, scale=0.1, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0, name=None):
-        self.max_P = 1000
-        n = self._generate_n(f, tau, offset=offset, scale=scale)
+            self, interval=10, tau=0.5, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0, name=None):
+        self.max_P = 256
+        n = self._generate_n(interval, tau)
         super(ScattSoilLayer, self).__init__(
             n, density=density, dcoh=dcoh, coh0=coh0, h=None)
         self.dz = dz
         if name is None:
             name = self.class_name
         self.name = name
-        
+
     def _n(self, p):
         assert p < self.max_P, f"p must be less than {self.max_P}"
         return self.n[p]
@@ -495,7 +532,6 @@ class PrecipScatterSoilLayer(ScattSoilLayer):
         plt.plot(-1 * self.n.imag[:P], '--', label='-1 * imag', color='black')
         plt.legend(loc='best')
         plt.show()
-
 
 class SeasonalVegLayer(ScattLayer):
     '''
@@ -523,7 +559,7 @@ class SeasonalVegLayer(ScattLayer):
         if name is None:
             name = self.class_name
         self.name = name
-        
+
     def _n(self, p):
         '''
             Compute refractive index at time p.
@@ -534,7 +570,7 @@ class SeasonalVegLayer(ScattLayer):
             1j * rng.normal(0, self.n_std.imag, 1)
         costerm = np.cos(2 * np.pi * p / self.P_year)
         n = self.n_mean + self.n_amp * costerm + p / self.P_year * self.n_t + n_random
-        return complex(n.real - 1j * n.real/100)
+        return complex(n.real - 1j * n.real / 100)
 
     @property
     def class_name(self):
@@ -542,3 +578,5 @@ class SeasonalVegLayer(ScattLayer):
 
 if __name__ == '__main__':
     pass
+    dielM = DobsonDielectric()
+    print(dielM.permittivity(0.35))
