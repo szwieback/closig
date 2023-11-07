@@ -30,8 +30,9 @@ def model_catalog(scenario, P_year=30, band='C'):
         sl = HomogSoilLayer()
         model = LayeredCovModel([svl, sl])
     elif scenario == 'precipsoil':
-        model = PrecipScatterSoilLayer(
-            f=10, tau=1, dcoh=0.99, coh0=0, offset=0.1, scale=0.1)
+        psl = PrecipScatterSoilLayer(
+            interval=10, tau=1, dcoh=0.8, coh0=0.1)
+        model = LayeredCovModel([psl])
     else:
         raise ValueError(f"Scenario {scenario} not known")
     return model
