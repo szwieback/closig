@@ -16,7 +16,7 @@ globfigparams = {
     'fontcolour': '#666666', 'tickdirection': 'out', 'linewidth': 0.5,
     'ticklength': 2.50, 'minorticklength': 1.1}
 
-colslist = ['#2b2d47', '#8a698c', '#b29274', '#aaaaaa']
+colslist = ['#2b2d47', '#8a698c', '#b29274', '#aaaaaa', '#dddddd']
 
 def initialize_matplotlib():
     plt.rc(
