@@ -24,7 +24,7 @@ def model_catalog(scenario, P_year=30, band='C'):
         fractions = [0.8, 0.2]
         model = TiledModel([center, trough], fractions=fractions, geom=geom)
     elif scenario in ('seasonalveg', 'seasonaltrendveg'):
-        n_t = {'seasonalveg': 0.0, 'seasonaltrendveg': 0.1 - 0.002j}[scenario]
+        n_t = {'seasonalveg': 0.0, 'seasonaltrendveg': 0.01}[scenario]
         svl = SeasonalVegLayer(
             n_mean=n_mean, n_amp=n_amp, n_std=n_std, n_t=n_t, density=1/h, dcoh=0.6, P_year=P_year, h=h)
         sl = HomogSoilLayer()

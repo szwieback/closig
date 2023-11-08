@@ -10,7 +10,6 @@ def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
     import matplotlib.gridspec as gridspec
     from matplotlib import cm
     from matplotlib.colors import Normalize
-    import colorcet as cc
     cmap, vabs = cmap_cyclic, 180
     initialize_matplotlib()
     fig = plt.figure(figsize=(6.5, 1.8))

@@ -25,8 +25,8 @@ def phase_error_plot(
     angle_dp = np.angle(phe)
     mask_angle_dp = mask_angle(angle_dp)
     col = colslist[0]
-    ax.axhline(0.0, c=colslist[-1], lw=0.5, alpha=0.5, zorder=2)
-    ax.plot(dp_years, mask_angle_dp, c=col, lw=0.5)
+    ax.axhline(0.0, c='#666666', lw=0.5, alpha=0.1, zorder=2)
+    ax.plot(dp_years, mask_angle_dp, c=col, lw=0.8)
     ax.plot(
         dp_years[mask_angle_dp.mask], angle_dp[mask_angle_dp.mask], linestyle='none', ms=1, marker='o',
         mec='none', mfc=col)
@@ -54,7 +54,7 @@ def phase_history_bias_plot(
     phe = ex.phase_history_error()
     dps = ex.dps
     p_years = ex._dp_years(ex.p)
-    ax.axhline(0.0, c=colslist[-1], lw=0.5, alpha=0.5, zorder=2)
+    ax.axhline(0.0, c='#666666', lw=0.5, alpha=0.1, zorder=2)
     ax.set_ylim((-np.pi, np.pi))
     ax.set_yticks((-np.pi, 0, np.pi))
     ax.set_yticklabels(('$-\\pi$', '0', '$\\pi$'))
@@ -62,9 +62,10 @@ def phase_history_bias_plot(
         col = cols[jdp]
         angle_dp = np.angle(phe_dp)
         mask_angle_dp = mask_angle(angle_dp)
-        ax.plot(p_years, mask_angle_dp, c=col, label=dps[jdp], lw=0.5)
+        ax.plot(p_years, mask_angle_dp, c=col, label=dps[jdp], lw=0.8)
         ax.plot(
-            p_years[mask_angle_dp.mask], angle_dp[mask_angle_dp.mask], linestyle='none', ms=1, marker='o', mec='none', mfc=col)
+            p_years[mask_angle_dp.mask], angle_dp[mask_angle_dp.mask], linestyle='none', ms=1, marker='o', 
+            mec='none', mfc=col)
     if show_xlabel:
         if y_xlab is None: y_xlab = y_xlab_def
         ax.text(0.50, y_xlab, 'time [yr]', transform=ax.transAxes, va='baseline', ha='center')
@@ -77,20 +78,21 @@ def phase_history_bias_plot(
     return ax
 
 def phase_history_metric_plot(
-        ex, ax=None, samples=64, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None):
+        ex, ax=None, samples=64, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None,
+        show_xticklabels=True):
     if cols is None: cols = [c for c in colslist]
     if ax is None:
         _, ax = prepare_figure()
     C_obs = ex.observed_covariance(samples=(samples,))
     phe = ex.phase_history_error(C_obs)
     metric = ex.cos_metric(phe)
-    ax.axhline(0.0, c=colslist[-1], lw=0.5, alpha=0.5, zorder=2)
+    ax.axhline(0.0, c='#666666', lw=0.5, alpha=0.1, zorder=2)
     dps = ex.dps
     p_years = ex._dp_years(ex.p)
 
     for jdp, m_dp in enumerate(metric):
         col = cols[jdp]
-        ax.plot(p_years, m_dp, c=col, label=dps[jdp], lw=0.5)
+        ax.plot(p_years, m_dp, c=col, label=dps[jdp], lw=0.8)
     ax.set_ylim((0, 1))
     ax.set_yticks((0, 1))
     if show_xlabel:
@@ -100,6 +102,8 @@ def phase_history_metric_plot(
         if x_ylab is None: x_ylab = x_ylab_def
         ax.text(
             x_ylab, 0.50, 'cos metric [-]', transform=ax.transAxes, va='center', ha='right', rotation=90)
+    if not show_xticklabels:
+        ax.set_xticklabels([])      
     return ax
 
 def triangle_experiment_plot(
@@ -107,7 +111,6 @@ def triangle_experiment_plot(
         cmap=None, vabs=180, show_xticklabels=True, show_yticklabels=True, aspect=0.75, ticks=None):
     if ax is None:
         _, ax = prepare_figure()
-    import colorcet as cc
     basis, cclosures = ex.basis_closure(Basis, compl=True)
     if extent is None: extent = (0, (ex.P + 1)/ex.P_year) * 2
     triangle_plot(
