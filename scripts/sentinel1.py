@@ -21,8 +21,8 @@ def plot_triangles(roi, p0, pfig):
     fns = p0 / f'{roi}.npy'
     pfig.mkdir(exist_ok=True)
     Cvec = np.moveaxis(np.load(fns), 0, -1)
-    N = int(-1 / 2 + np.sqrt((1 / 4) + 2 * Cvec.shape[-1]))
-    bases = {'small steps': SmallStepBasis(N), 'two hops': TwoHopBasis(N)}
+    P = int(-1 / 2 + np.sqrt((1 / 4) + 2 * Cvec.shape[-1]))
+    bases = {'small steps': SmallStepBasis(P), 'two hops': TwoHopBasis(P)}
     vabs = {'small steps': 180, 'two hops': 45}
     cmaps = {'small steps': cmap_cyclic, 'two hops': cmap_clipped}
     fig, axs = prepare_figure(
@@ -41,6 +41,7 @@ def plot_triangles(roi, p0, pfig):
     
 if __name__ == '__main__':
     rois = ['Colorado_rocky', 'Colorado_mountains', 'Colorado_grass', 'Colorado_fields']
-    # rois = ['NewMexico_dissected', 'NewMexico_flat', 'NewMexico_mountain', 'NewMexico_eroded']    
+    # rois = ['NewMexico_dissected', 'NewMexico_flat', 'NewMexico_mountain', 'NewMexico_eroded']
+    rois = ['Wevok_toeslope', 'Wevok_hillslope', 'Wevok_rolling', 'Wevok_mountains']    
     for roi in rois:
         plot_triangles(roi, p0, pfig)
