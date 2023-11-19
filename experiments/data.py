@@ -14,8 +14,7 @@ class CutOffDataExperiment(CutOffExperiment):
     def __init__(self, C, dps, P_year=30):
         self.dps = dps
         self.P = C.shape[-1]
-        self.shape = C.shape
-        self.C = np.reshape(C, (-1, self.P, self.P))
+        self.C = C #np.reshape(C, (-1, self.P, self.P))
         self.P_year = P_year
         
     @property
@@ -31,8 +30,10 @@ def load_C(fn):
 if __name__ == '__main__':
     p0 = Path('/home/simon/Work/closig/stacks')
     C = load_C(p0 / 'NewMexico_eroded.npy')
+    C = C[:8, :16, ...]
+    print(C.shape)
     ex = CutOffDataExperiment(C, dps=(1, 30))
-    ph = ex.phase_history()
-    print(ph.shape)
+    ph = ex.phase_history(N_jobs=4)
+
     
     

@@ -7,7 +7,7 @@ Created on Nov 1, 2023
 from abc import abstractmethod
 import numpy as np
 
-from closig import EVD, CutOffRegularizer
+from closig import EVDLinker, CutOffRegularizer
 
 class Experiment():
     default_L = 169
@@ -42,9 +42,8 @@ class Experiment():
             return correlation(C)
 
     def phase_history_displacement(self, corr=True):
-
         Cd = self._correlation_matrix(self.Cd, corr=corr)
-        return EVD().link(Cd)
+        return EVDLinker().link(Cd)
 
     def phase_history_error(self, C=None, dps=None):
         if C is None: C = self.C
@@ -94,11 +93,11 @@ class CutOffExperiment(Experiment):
 
     @property
     def Cd(self):
-        return self.Cd
+        return self._Cd
 
-    def phase_history(self, C=None, dps=None, corr=True):
+    def phase_history(self, C=None, dps=None, corr=True, N_jobs=1):
         if dps is None: dps = self.dps
         if C is None: C = self.C
         _C = self._correlation_matrix(C, corr=corr)
-        ph = np.stack([EVD(CutOffRegularizer(dp)).link(_C) for dp in dps], axis=-2)
+        ph = np.stack([EVDLinker(CutOffRegularizer(dp)).link(_C, N_jobs=N_jobs) for dp in dps], axis=-2)
         return ph

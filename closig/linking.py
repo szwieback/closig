@@ -105,29 +105,30 @@ class Linker():
     def __init__(self):
         self.regularizer = IdleRegularizer()
 
-    def test_square(self, C):
-        C_shape = C.shape
-        P = C_shape[-1]
-        if C_shape[-2] != P:
-            raise ValueError(
-                f"Expected G of shape (..., P, P) but got {C.shape}")
-
-    def link(self, C_obs, G=None, corr=True, **kwargs):
-        self.test_square(C_obs)
+    def link(self, C_obs, G=None, corr=True, N_jobs=1, **kwargs):
         P = C_obs.shape[-1]
-        _C_obs = C_obs
-        if corr:
-            _C_obs = correlation(C_obs)
+        if C_obs.shape[-2] != P: raise ValueError(f"Expected G of shape (..., P, P) but got {C_obs.shape}")
+        if G is not None and G.shape != C_obs.shape: raise ValueError("G and C_obs need to have same shape")
+        _C_obs = np.reshape(C_obs, (-1, P, P))
+        if corr: _C_obs = correlation(C_obs, inplace=True)
+        if N_jobs in (0, 1, None):
+            cphase = self._link_batch(_C_obs, G, **kwargs)
+        else:
+            from joblib import Parallel, delayed
+            C_obs_split = np.array_split(_C_obs, N_jobs)
+            G_split = np.array_split(G, N_jobs) if G is not None else (None, ) * N_jobs
+            def _link_single(n): return self._link_batch(C_obs_split[n], G_split[n], **kwargs)
+            cphase = np.concatenate(
+                Parallel(n_jobs=N_jobs)(delayed(_link_single)(n) for n in range(N_jobs)))
+        return np.reshape(cphase, C_obs.shape[:-1])
+
+    def _link_batch(self, C_obs, G, **kwargs):
         if G is None:
             G = self.estimate_G(
                 C_obs, **restrict_kwargs(self.estimate_G, kwargs))
-        else:
-            if G.shape != _C_obs.shape:
-                raise ValueError("G needs to have same shape as C_obs")
-        shape3 = (-1, P, P)
         cphase = self._link(
-            np.reshape(C_obs, shape3), np.reshape(G, shape3), **restrict_kwargs(self.link, kwargs))
-        return np.reshape(cphase, C_obs.shape[:-1])
+            C_obs, G, **restrict_kwargs(self.link, kwargs))
+        return cphase
 
     @abstractmethod
     def _link(self, C_obs, G):
@@ -145,7 +146,7 @@ class Linker():
     def _regularize_G(self, G, **kwargs):
         return self.regularizer.regularize(G, **kwargs)
 
-class EMI(Linker):
+class EMILinker(Linker):
     def __init__(self, regularizer=None):
         if regularizer is not None:
             self.regularizer = regularizer
@@ -153,11 +154,11 @@ class EMI(Linker):
             self.regularizer = IdleRegularizer()
 
     def _link(self, C_obs, G):
-        from greg import EMI as _EMI
-        return _EMI(C_obs, G=G, corr=False)
+        from greg import EMI
+        return EMI(C_obs, G=G, corr=False)
 
 
-class EMI_py(EMI):
+class EMILinker_py(EMILinker):
     def __init__(self, regularizer=None):
         if regularizer is not None:
             self.regularizer = regularizer
@@ -169,9 +170,9 @@ class EMI_py(EMI):
         return _EMI(C_obs, G=G, corr=False)
 
 
-class NearestNeighbor(Linker):
+class NearestNeighborLinker(Linker):
     '''
-        Simplest possible linking method: daisy chain or cumulative product of off-diagonal elements of the covariance matrix
+        daisy chain or cumulative product of off-diagonal elements of the covariance matrix
     '''
 
     def _link(self, C_obs, G=None, corr=True, **kwargs):
@@ -181,7 +182,7 @@ class NearestNeighbor(Linker):
         return nn
 
 
-class EVD(Linker):
+class EVDLinker(Linker):
     '''
         Basic eigenvector decomposition of the covariance matrix
     '''
@@ -196,13 +197,14 @@ class EVD(Linker):
         return self.regularizer.regularize(G, **kwargs)
 
     def _link(self, C_obs, G=None):
-        from greg.linking import EVD_py as _EVD
-        return _EVD(C_obs, G=G, corr=False)
+        from greg.linking import EVD as EVD
+        cphase = EVD(C_obs, G=G, corr=False)
+        return cphase
 
 
 if __name__ == '__main__':
     C_obs = np.ones((2, 3, 10, 10), dtype=np.complex128)
-    emi = EMI(regularizer=CutOffRegularizer())
+    emi = EMILinker(regularizer=CutOffRegularizer())
     print(emi.estimate_G(C_obs, tau_max=4).shape)
     emi.link(C_obs, tau_max=4)
-    # print(EMI.distance_from_diagonal(C_obs.shape[-1]) < 3)
+    # print(EMILinker.distance_from_diagonal(C_obs.shape[-1]) < 3)
