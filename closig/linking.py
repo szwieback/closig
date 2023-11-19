@@ -93,8 +93,9 @@ class CutOffRegularizer(Regularizer):
             if _G.shape[-2] != _G.shape[-1]:
                 raise ValueError(
                     f"Expected G of shape (..., P, P) but got {_G.shape}")
-            _G *= (self.distance_from_diagonal(
+            mask = (self.distance_from_diagonal(
                 _G.shape[-1]) <= self.dp_cutoff)
+            _G *= mask
             force_doubly_nonnegative(_G, inplace=True)
         return _G
 

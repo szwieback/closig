@@ -42,10 +42,9 @@ class Experiment():
             return correlation(C)
 
     def phase_history_displacement(self, corr=True):
+
         Cd = self._correlation_matrix(self.Cd, corr=corr)
         return EVD().link(Cd)
-
-
 
     def phase_history_error(self, C=None, dps=None):
         if C is None: C = self.C
@@ -82,7 +81,7 @@ class CutOffExperiment(Experiment):
         self.model = model
         self.P = P
         self.P_year = P_year
-        self.Cd = model.covariance(P, coherence=True, displacement_phase=True)
+        self._Cd = model.covariance(P, coherence=True, displacement_phase=True)
         self.C = model.covariance(P, coherence=True)
 
     def _dp_years(self, dps=None):
@@ -92,6 +91,10 @@ class CutOffExperiment(Experiment):
     @property
     def p(self):
         return np.arange(self.P)
+
+    @property
+    def Cd(self):
+        return self.Cd
 
     def phase_history(self, C=None, dps=None, corr=True):
         if dps is None: dps = self.dps
