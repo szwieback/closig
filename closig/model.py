@@ -14,14 +14,17 @@ def coherence_model(p0, p1, dcoh, coh0=0.0):
         coh = coh0 + (1 - coh0) * dcoh ** (abs(p0 - p1))
     return coh
 
-def soil_moisture_precip(interval, tau, unit_filter_length=20, P0=5, P=1000, porosity=0.35, residual=0.02):
+def soil_moisture_precip(
+        interval, tau, unit_filter_length=20, P0=5, P_year=30, P=1024, porosity=0.35, residual=0.02, 
+        seasonality=0.0):
     '''
         Generate a normalized soil moisture timeseries fed by uniformly spaced precipitation pulses
     '''
     impulses = np.zeros(P)
-    impulses[P0::interval] = porosity
+    precip_eff = porosity * ((1 - seasonality) + seasonality * np.cos(2*np.pi*np.arange(P)/P_year))
+    impulses[P0::interval] = precip_eff[P0::interval]
     # Exponential decay
-    filter_length = int(unit_filter_length // tau)
+    filter_length = int(unit_filter_length / tau)
     kernel = np.exp(-1 * np.arange(0, filter_length) * tau)
     sm = np.convolve(impulses, kernel)
     sm[sm > porosity] = porosity
@@ -505,21 +508,23 @@ class PrecipScatterSoilLayer(ScattSoilLayer):
         dz: displacement of soil surface
     '''
 
-    def _generate_n(self, f, tau):
-        dielModel = DobsonDielectric()
-        state = soil_moisture_precip(f, tau, P=self.max_P) # this should be claned up; max_P superfluous
-        return np.array([dielModel.n(s) for s in state])
-
     def __init__(
-            self, interval=10, tau=0.5, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0, name=None):
+            self, interval=10, tau=0.5, dz=0.0, density=1.0, dcoh=0.5, coh0=0.0, P_year=30, seasonality=0.0, 
+            name=None):
         self.max_P = 256
-        n = self._generate_n(interval, tau)
+        n = self._generate_n(interval, tau, P_year=P_year, seasonality=seasonality)
         super(ScattSoilLayer, self).__init__(
             n, density=density, dcoh=dcoh, coh0=coh0, h=None)
         self.dz = dz
         if name is None:
             name = self.class_name
         self.name = name
+
+    def _generate_n(self, f, tau, P_year=30, seasonality=0.0):
+        # this should be cleaned up; max_P superfluous because deterministic
+        dielModel = DobsonDielectric()
+        state = soil_moisture_precip(f, tau, P=self.max_P, P_year=P_year, seasonality=seasonality)
+        return np.array([dielModel.n(s) for s in state])
 
     def _n(self, p):
         assert p < self.max_P, f"p must be less than {self.max_P}"

@@ -33,6 +33,10 @@ def model_catalog(scenario, P_year=30, band='C'):
         psl = PrecipScatterSoilLayer(
             interval=10, tau=1, dcoh=0.8, coh0=0.1)
         model = LayeredCovModel([psl])
+    elif scenario == 'seasonalprecipsoil':
+        psl = PrecipScatterSoilLayer(
+            interval=3, tau=1, dcoh=0.8, coh0=0.1, P_year=P_year, seasonality=0.8)
+        model = LayeredCovModel([psl])
     else:
         raise ValueError(f"Scenario {scenario} not known")
     return model

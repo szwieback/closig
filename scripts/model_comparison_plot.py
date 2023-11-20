@@ -15,12 +15,15 @@ xlim_year = (0, P/P_year)
 xticks_year = (0, 1, 2, 3)
 
 modelp = model_catalog('precipsoil', P_year=P_year, band='C')
+modelps = model_catalog('seasonalprecipsoil', P_year=P_year, band='C')
 models = model_catalog('seasonalveg', P_year=P_year, band='C')
 modelt = model_catalog('seasonaltrendveg', P_year=P_year, band='C')
 modeld = model_catalog('diffdisp', P_year=P_year, band='C')
 
-models = [modelp, models, modelt, modeld]
-headers = ['soil moisture', 'seasonal vegetation', 'growing vegetation', 'differential displacement']
+models = [modelp, modelps, models, modelt, modeld]
+headers = [
+    'soil moisture', 'seasonal soil moisture', 'seasonal vegetation', 'growing vegetation', 
+    'differential displacement']
 ylabels = [
     ('small step', '[yr]'), ('two hop', '[yr]'), ('$\\varphi$ bias', '[rad]'), ('$\\phi$ bias', '[rad]'), 
     ('$c_{\\phi}$', '[-]')]
@@ -33,8 +36,8 @@ from matplotlib.cm import ScalarMappable
 import matplotlib.lines as mlines
 from matplotlib.colors import Normalize
 fig, axs = prepare_figure(
-    nrows=5, ncols=len(models), figsize=(2.00, 1.45), sharey='row', sharex='col', top=0.97, left=0.07, 
-    wspace=0.20, hspace=0.18, bottom=0.07, right=0.91)
+    nrows=5, ncols=len(models), figsize=(2.04, 1.45), sharey='row', sharex='col', top=0.97, left=0.07, 
+    wspace=0.20, hspace=0.18, bottom=0.07, right=0.90)
 for ax in axs[2:, :].flatten():
     ax.set_box_aspect(aspect)
 
