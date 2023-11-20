@@ -6,7 +6,6 @@ Created on Jan 4, 2023
 
 import numpy as np
 from abc import ABC, abstractmethod
-from pip._vendor.pyparsing.core import Forward
 
 # Covariance:
 # ..., P, P
