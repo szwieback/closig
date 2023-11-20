@@ -101,3 +101,28 @@ class CutOffExperiment(Experiment):
         _C = self._correlation_matrix(C, corr=corr)
         ph = np.stack([EVDLinker(CutOffRegularizer(dp)).link(_C, N_jobs=N_jobs) for dp in dps], axis=-2)
         return ph
+
+
+class CutOffDataExperiment(CutOffExperiment):
+    def __init__(self, C, dps):
+        self.dps = dps
+        self.P = C.shape[-1]
+        self.C = C
+        self.P_year = None
+        
+    @property
+    def Cd(self):
+        raise ValueError("Cd not defined for CuttOffDataExperiment")
+    
+    @classmethod
+    def from_file(cls, fn, dps, add_full=False):
+        C = load_C (fn)
+        if add_full:
+            dps = tuple(dps) + (C.shape[-1],)
+        return cls(C, dps)
+        
+def load_C(fn):
+    from greg import assemble_tril
+    Cvec = np.moveaxis(np.load(fn), 0, -1)
+    C = assemble_tril(Cvec, lower=False)
+    return C        
