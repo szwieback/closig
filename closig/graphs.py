@@ -1,6 +1,5 @@
 import numpy as np
-import networkx as nx
-from networkx import cycles
+
 
 
 def get_rand_graph(n, k=0.5, l=10):
@@ -10,6 +9,7 @@ def get_rand_graph(n, k=0.5, l=10):
         l: temporal baselines to omit
         returns graph and adjacency matrix
     '''
+    import networkx as nx
     G = nx.Graph()
     G.add_nodes_from(range(0, n))
     A = np.ones((n, n))
@@ -41,4 +41,5 @@ def cycle_rank(G):
         Given a graph G, compute its cycle rank 
         returns cycle rank
     '''
+    from networkx import cycles
     return np.array(cycles.cycle_basis(G)).shape[0]
