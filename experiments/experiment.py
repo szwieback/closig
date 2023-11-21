@@ -7,7 +7,7 @@ Created on Nov 1, 2023
 from abc import abstractmethod
 import numpy as np
 
-from closig import EVDLinker, CutOffRegularizer
+from closig import EVDLinker, EVDPowerLinker
 
 class Experiment():
     default_L = 169
@@ -99,7 +99,9 @@ class CutOffExperiment(Experiment):
         if dps is None: dps = self.dps
         if C is None: C = self.C
         _C = self._correlation_matrix(C, corr=corr)
-        ph = np.stack([EVDLinker(CutOffRegularizer(dp)).link(_C, N_jobs=N_jobs) for dp in dps], axis=-2)
+        ph = np.stack(
+            [EVDLinker(CutOffRegularizer(dp, enforce_dnn=False)).link(_C, N_jobs=N_jobs) 
+             for dp in dps], axis=-2)
         return ph
 
 
