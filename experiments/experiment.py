@@ -7,7 +7,8 @@ Created on Nov 1, 2023
 from abc import abstractmethod
 import numpy as np
 
-from closig import EVDLinker, EVDPowerLinker
+from closig import EVDLinker, CutOffRegularizer
+from experiments import PhaseHistoryMetric
 
 class Experiment():
     default_L = 169
@@ -49,16 +50,13 @@ class Experiment():
         if C is None: C = self.C
         ph = self.phase_history(C=C, dps=dps)
         phd = self.phase_history_displacement()
-        sl = (None,) * (len(ph.shape) - len(phd.shape)) + (Ellipsis,)
-        error = ph * phd[sl].conj()
-        error /= np.abs(error)
-        return error
-    
-    def cos_metric(self, error, axis=(0,)):
-        return 0.5 * (1 - np.mean(np.real(error), axis=axis))
-    
-    def mean_metric(self, error, axis=(0,)):
-        return np.angle(np.mean(error, axis=axis))
+        return PhaseHistoryMetric.deviation(ph, phd)
+
+    def evaluate_metric(self, metric, C=None, dps=None):
+        if C is None: C = self.C
+        ph = self.phase_history(C=C, dps=dps)
+        phd = self.phase_history_displacement()
+        return metric.evaluate(ph, phd)
 
     def phase_error(self, C=None, p0=0):
         if C is None: C = self.C

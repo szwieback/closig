@@ -7,6 +7,7 @@ import numpy as np
 import numpy.ma as ma
 
 from closig.visualization import prepare_figure, initialize_matplotlib, colslist, triangle_plot
+from experiments import CosMetric 
 
 y_xlab_def = -0.40
 x_ylab_def = -0.18
@@ -84,8 +85,7 @@ def phase_history_metric_plot(
     if ax is None:
         _, ax = prepare_figure()
     C_obs = ex.observed_covariance(samples=(samples,))
-    phe = ex.phase_history_error(C_obs)
-    metric = ex.cos_metric(phe)
+    metric = ex.evaluate_metric(CosMetric(), C=C_obs)
     ax.axhline(0.0, c='#666666', lw=0.5, alpha=0.1, zorder=2)
     dps = ex.dps
     p_years = ex._dp_years(ex.p)

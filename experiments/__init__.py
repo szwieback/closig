@@ -3,6 +3,7 @@ Created on Nov 1, 2023
 
 @author: simon
 '''
+from experiments.metrics import PhaseHistoryMetric, CosMetric, MeanDeviationMetric
 from experiments.experiment import Experiment, CutOffExperiment, CutOffDataExperiment
 from experiments.catalog import model_catalog
 from experiments.plots import (
