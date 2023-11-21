@@ -82,8 +82,9 @@ class CutOffRegularizer(Regularizer):
         Simulate an SBAS network with bandwith/cutoff dp_cutoff (dp: scene difference)
     '''
 
-    def __init__(self, dp_cutoff=None):
+    def __init__(self, dp_cutoff=None, enforce_dnn=True):
         self.dp_cutoff = dp_cutoff
+        self.enforce_dnn = enforce_dnn
 
     def regularize(self, G, inplace=False):
         if self.dp_cutoff is None:
@@ -96,7 +97,8 @@ class CutOffRegularizer(Regularizer):
             mask = (self.distance_from_diagonal(
                 _G.shape[-1]) <= self.dp_cutoff)
             _G *= mask
-            force_doubly_nonnegative(_G, inplace=True)
+            if self.enforce_dnn: 
+                force_doubly_nonnegative(_G, inplace=True)
         return _G
 
 
@@ -203,8 +205,9 @@ class EVDLinker(Linker):
 
 
 if __name__ == '__main__':
-    C_obs = np.ones((2, 3, 10, 10), dtype=np.complex128)
-    emi = EMILinker(regularizer=CutOffRegularizer())
-    print(emi.estimate_G(C_obs, tau_max=4).shape)
-    emi.link(C_obs, tau_max=4)
-    # print(EMILinker.distance_from_diagonal(C_obs.shape[-1]) < 3)
+    eps = 0.4
+    C_obs = np.array([[3, 1j, eps + 1j], [-1j, 4, 1], [eps -1j, 1, 4]])[np.newaxis, ...]
+    ceig = EMILinker().link(C_obs)
+    print(ceig)
+
+    
