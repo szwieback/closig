@@ -62,11 +62,14 @@ class TrendSeasonalMetric(PhaseHistoryMetric):
         #requires (..., P) shape
         dphi = self.deviation(ph1, ph2)
         P = dphi.shape[-1]
-        dphi_unw = np.unwrap(np.angle(dphi), axis=-1)
-        dphi_unw_rs = np.reshape(dphi_unw, (-1, P))
+        dphi_rs = np.reshape(dphi, (-1, P))
+        mask = np.any(np.logical_not(np.isfinite(dphi_rs)), axis=-1)
+        dphi_rs[mask, :] = 1                
+        dphi_unw_rs = np.unwrap(np.angle(dphi_rs), axis=-1)
         X = self.predictor_matrix(P)
-        beta = np.linalg.lstsq(X.T, dphi_unw_rs.T, rcond=None)[0]
-        return np.reshape(beta.T, dphi_unw.shape[:-1] + (X.shape[0],))         
+        beta = np.linalg.lstsq(X.T, dphi_unw_rs.T, rcond=None)[0].T
+        beta[mask, :] = np.nan
+        return np.reshape(beta, dphi.shape[:-1] + (X.shape[0],))         
 
 class PeriodogramMetric(PhaseHistoryMetric):
     

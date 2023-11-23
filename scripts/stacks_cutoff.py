@@ -13,24 +13,23 @@ p0 = Path('/home2/Work/closig/')
 pin = p0 / 'stacks'
 pout = p0 / 'processed/'
 dps, add_full = (1, 16, 31), True
-P_year=30.4
+P_year = 30.4
+overwrite = False
 
 metrics = {'trend': TrendSeasonalMetric(P_year=P_year), 'psd': PeriodogramMetric(P_year=P_year)}
 meta = {'P_year': P_year, 'dps': dps, add_full: add_full}
 fns = list(pin.glob('*.npy'))
-fns = [fns[6]]
-print(fns)
+
 for fn in fns:
-    fnout = pout / 'phasehistory' / fn.name    
-    ex = CutOffDataExperiment.from_file(fn, dps=dps, add_full=add_full)
-    ph = ex.phase_history(N_jobs=48)
-    save_object((ph, meta), fnout)
+    fnout = (pout / 'phasehistory' / fn.stem).with_suffix('.p')
+    if overwrite or not fn.exists():
+        ex = CutOffDataExperiment.from_file(fn, dps=dps, add_full=add_full)
+        ph = ex.phase_history(N_jobs=48)
+        save_object((ph, meta), fnout)
     ph = load_object(fnout)[0]
     res = {}
     for metric in metrics:
-        res[metric] = [metrics[metric].evaluate(ph[..., jdp, :], ph[..., -1, :]) 
+        res[metric] = [metrics[metric].evaluate(ph[..., jdp,:], ph[..., -1,:])
                        for jdp, dp in enumerate(dps)]
-    save_object((ph, meta), pout / 'metrics' / fn.name)
-            
-    
-    
+    save_object((ph, meta), (pout / 'metrics' / fn.stem).with_suffix('.p'))
+
