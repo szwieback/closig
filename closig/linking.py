@@ -6,7 +6,6 @@ Created on Jan 20, 2023
 '''
 from abc import abstractmethod
 import closig.graphs as graphs
-from greg import correlation, force_doubly_nonnegative
 import numpy as np
 
 
@@ -87,6 +86,7 @@ class CutOffRegularizer(Regularizer):
         self.enforce_dnn = enforce_dnn
 
     def regularize(self, G, inplace=False):
+        from greg import force_doubly_nonnegative
         if self.dp_cutoff is None:
             _G = G
         else:
@@ -108,6 +108,7 @@ class Linker():
         self.regularizer = IdleRegularizer()
 
     def link(self, C_obs, G=None, corr=True, N_jobs=1, **kwargs):
+        from greg import correlation
         P = C_obs.shape[-1]
         if C_obs.shape[-2] != P: raise ValueError(f"Expected G of shape (..., P, P) but got {C_obs.shape}")
         if G is not None and G.shape != C_obs.shape: raise ValueError("G and C_obs need to have same shape")
@@ -142,6 +143,7 @@ class Linker():
         if self.regularizer is not None:
             G = self._regularize_G(G, **kwargs)
         else:
+            from greg import force_doubly_nonnegative
             G = force_doubly_nonnegative(G, inplace=True)
         return G
 
@@ -168,7 +170,7 @@ class EMILinker_py(EMILinker):
             self.regularizer = IdleRegularizer()
 
     def _link(self, C_obs, G=None):
-        from greg.linking import EMI_py as _EMI
+        from greg import EMI_py as _EMI
         return _EMI(C_obs, G=G, corr=False)
 
 
@@ -178,10 +180,10 @@ class NearestNeighborLinker(Linker):
     '''
 
     def _link(self, C_obs, G=None, corr=True, **kwargs):
-        nn = np.cumprod(np.diagonal(C_obs, 1))
-        # append 1 to the beginning of phase history
-        # nn = np.insert(nn, 0, np.exp(1j*0))
-        return nn
+        ph_nn = np.ones(C_obs.shape[:-1], dtype=C_obs.dtype) 
+        ph_nn[..., 1:] = np.cumprod(np.diagonal(C_obs, 1, axis1=-2, axis2=-1), axis=-1)
+        ph_nn /= np.abs(ph_nn)
+        return ph_nn
 
 
 class EVDLinker(Linker):
@@ -199,7 +201,7 @@ class EVDLinker(Linker):
         return self.regularizer.regularize(G, **kwargs)
 
     def _link(self, C_obs, G=None):
-        from greg.linking import EVD as EVD
+        from greg import EVD
         cphase = EVD(C_obs, G=G, corr=False)
         return cphase
 
