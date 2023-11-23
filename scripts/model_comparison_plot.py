@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-from experiments import (
+from closig.experiments import (
     CutOffExperiment, model_catalog, phase_error_plot, phase_history_bias_plot, phase_history_metric_plot,
     triangle_experiment_plot)
 from closig.visualization import prepare_figure, cmap_clipped, cmap_cyclic, colslist

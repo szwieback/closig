@@ -80,59 +80,8 @@ class PeriodogramMetric(PhaseHistoryMetric):
         P = phd.shape[-1]
         mask = np.any(np.logical_not(np.isfinite(phd)), axis=-1)
         phd[mask, :] = 0
-        f, p = periodogram(phd, axis=-1, nfft=2 * P, fs=P_year, return_onesided=False)
+        f, p = periodogram(phd, axis=-1, nfft=2 * P, fs=self.P_year, return_onesided=False)
         p[mask, :] = np.nan
         f, p = fftshift(f), fftshift(p, axes=-1)
         return f, p
     
-
-if __name__ == '__main__':
-    from pathlib import Path
-    p0 = Path('/home/simon/Work/closig')
-    ps = p0 / 'stacks'
-    p1 = p0 / 'processed/phasehistory'
-    P_year = 30.4
-    fns = list(p1.glob('*.npy'))
-    fn = fns[6]
-    # fn = fns[0]
-    
-    ph = np.load(fn)
-
-    tsm = TrendSeasonalMetric(P_year=P_year)
-    beta = tsm.evaluate(ph[..., 0, :], ph[..., -1, :])
-    
-    pm = PeriodogramMetric(P_year=P_year)
-    f, psd = pm.evaluate(ph[..., 0, :], ph[..., -1, :])
-    psd_avg = np.nanmean(psd, axis=(0, 1))
-    print(f)
-    
-    import matplotlib.pyplot as plt
-    plt.semilogy(f, psd_avg)
-    
-    plt.ylim((1e-3, 1e1))
-    plt.show()
-    
-    
-    # fix linker
-    # from experiments.experiment import load_C
-    # C = load_C(ps / fn.name).reshape((-1,)+ (phd.shape[-1], )*2)
-    # # differences negligible    
-    # C_diag = np.diagonal(C, offset=-1, axis1=-2, axis2=-1)
-    # ph_nn = np.ones(C.shape[:-1], dtype=C_diag.dtype) 
-    # print(C.shape, C_diag.shape, ph_nn.shape)
-    # ph_nn[:, 1:] = np.cumproduct(C_diag, axis=-1)
-    # ph_nn /= np.abs(ph_nn)
-    #
-    # # phd = ph[..., 0,:] * ph_nn.conj()
-    # # phd /= np.abs(phd)
-    # # phd = np.reshape(phd, (-1, phd.shape[-1]))
-    #
-    #
-    #
-    #
-    #
-    # t_y = np.arange(phd.shape[-1]) / P_year 
-    # plt.plot(t_y, np.angle(phd[::200,:]).T, alpha=0.2)
-    # # plt.plot(t_y, np.angle(np.sum(phd, axis=0)))
-    # plt.show()
-    #

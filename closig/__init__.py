@@ -3,3 +3,4 @@ from closig.model import (
     Geom, CovModel, LayeredCovModel, ContHetDispModel, Layer, TiledModel, HomogSoilLayer,
     SeasonalVegLayer, PrecipScatterSoilLayer)
 from closig.linking import EVDLinker, EMILinker, CutOffRegularizer, IdleRegularizer
+from closig.ioput import enforce_directory, load_object, save_object

@@ -73,7 +73,7 @@ def double_plot(bases, models, fnout=None, ticks=None, ticklabels=None):
 
 if __name__ == '__main__':
     from closig import TwoHopBasis, SmallStepBasis
-    from experiments import model_catalog
+    from closig.experiments import model_catalog
     import numpy as np
     P = 91
     P_year = 30

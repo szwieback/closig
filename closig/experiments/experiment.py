@@ -8,7 +8,7 @@ from abc import abstractmethod
 import numpy as np
 
 from closig import EVDLinker, CutOffRegularizer
-from experiments import PhaseHistoryMetric
+from closig.experiments import PhaseHistoryMetric
 
 class Experiment():
     default_L = 169

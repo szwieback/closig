@@ -7,7 +7,7 @@ import numpy as np
 import numpy.ma as ma
 
 from closig.visualization import prepare_figure, initialize_matplotlib, colslist, triangle_plot
-from experiments import CosMetric 
+from closig.experiments import CosMetric 
 
 y_xlab_def = -0.40
 x_ylab_def = -0.18
