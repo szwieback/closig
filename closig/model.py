@@ -500,7 +500,7 @@ class LohmanPrecipLayer(LohmanLayer):
         super(LohmanPrecipLayer, self).__init__(
             mv, mean=mean, var=var, L=L, dcoh=dcoh, coh0=coh0, name=name)
 
-class PrecipScatterSoilLayer(ScattSoilLayer):
+class PrecipScattSoilLayer(ScattSoilLayer):
     '''
         Scattering layer based on repeated impulse wetting and exponential dry-down.
         interval: interval of soil_moisture_precip

@@ -15,6 +15,7 @@ xlim_year = (0, P/P_year)
 xticks_year = (0, 1, 2, 3)
 
 modelp = model_catalog('precipsoil', P_year=P_year, band='C')
+modelss = model_catalog('seasonalsoil', P_year=P_year, band='C')
 modelps = model_catalog('seasonalprecipsoil', P_year=P_year, band='C')
 models = model_catalog('seasonalveg', P_year=P_year, band='C')
 modelt = model_catalog('seasonaltrendveg', P_year=P_year, band='C')
