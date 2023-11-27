@@ -86,7 +86,7 @@ def triangle_plot(
         ax.spines['top'].set_visible(False)
     if show_labels:
         ax.set_xlabel('t')
-        ax.set_ylabel(r'$\tau$')
+        ax.set_ylabel(r'$\\tau$')
 
     if cbar:
         cax = ax.inset_axes([1.04, 0, 0.05, 1], transform=ax.transAxes)

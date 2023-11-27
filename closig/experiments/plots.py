@@ -69,7 +69,7 @@ def phase_history_bias_plot(
             mec='none', mfc=col)
     if show_xlabel:
         if y_xlab is None: y_xlab = y_xlab_def
-        ax.text(0.50, y_xlab, 'time [yr]', transform=ax.transAxes, va='baseline', ha='center')
+        ax.text(0.50, y_xlab, '$t$ [yr]', transform=ax.transAxes, va='baseline', ha='center')
     if show_ylabel:
         if x_ylab is None: x_ylab = x_ylab_def
         ax.text(
@@ -97,7 +97,7 @@ def phase_history_metric_plot(
     ax.set_yticks((0, 1))
     if show_xlabel:
         if y_xlab is None: y_xlab = y_xlab_def
-        ax.text(0.50, y_xlab, 'time [yr]', transform=ax.transAxes, va='baseline', ha='center')
+        ax.text(0.50, y_xlab, '$t$ [yr]', transform=ax.transAxes, va='baseline', ha='center')
     if show_ylabel:
         if x_ylab is None: x_ylab = x_ylab_def
         ax.text(

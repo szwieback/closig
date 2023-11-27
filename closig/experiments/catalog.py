@@ -30,7 +30,7 @@ def model_catalog(scenario, P_year=30, band='C'):
             n_mean=n_mean, n_amp=n_amp, n_std=n_std, n_t=n_t, density=1/h, dcoh=0.6, P_year=P_year, h=h)
         sl = HomogSoilLayer()
         model = LayeredCovModel([svl, sl])
-    elif scenario in ('precipsoil', 'seasonalprecipsoil', 'seasonalsoil'):
+    elif scenario in ('precipsoil', 'seasonalprecipsoil', 'seasonalsoil', 'decorrsoil'):
         if scenario == 'precipsoil':
             sl = PrecipScattSoilLayer(
                 interval=10, tau=1, dcoh=0.8, coh0=0.1)
@@ -43,6 +43,12 @@ def model_catalog(scenario, P_year=30, band='C'):
         elif scenario == 'seasonalprecipsoil':
             sl = PrecipScattSoilLayer(
                 interval=3, tau=1, dcoh=0.8, coh0=0.1, P_year=P_year, seasonality=0.8)
+        elif scenario == 'decorrsoil':
+            P_max = 128
+            dielModel = DobsonDielectric()
+            state = 0.2
+            n = np.ones(P_max) * dielModel.n(state)
+            sl = ScattSoilLayer(n=n, dcoh=0.8, coh0=0.1)            
         model = LayeredCovModel([sl])
     else:
         raise ValueError(f"Scenario {scenario} not known")

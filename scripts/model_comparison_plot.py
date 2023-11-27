@@ -7,11 +7,10 @@ from closig.experiments import (
 from closig.visualization import prepare_figure, cmap_clipped, cmap_cyclic, colslist
 from closig import TwoHopBasis, SmallStepBasis
 
-
 P = 91
 P_year = 30
 dps = [1, 15, 30, 90]
-xlim_year = (0, P/P_year)
+xlim_year = (0, P / P_year)
 xticks_year = (0, 1, 2, 3)
 
 modelp = model_catalog('precipsoil', P_year=P_year, band='C')
@@ -23,36 +22,35 @@ modeld = model_catalog('diffdisp', P_year=P_year, band='C')
 
 models = [modelp, modelps, models, modelt, modeld]
 headers = [
-    'soil moisture', 'seasonal soil moisture', 'seasonal vegetation', 'growing vegetation', 
-    'differential displacement']
+    'soil moisture', 'seasonal soil moisture', 'harmonic soil moisture', 'seasonal vegetation',
+    'growing vegetation', 'differential displacement']
 ylabels = [
-    ('small step', '[yr]'), ('two hop', '[yr]'), ('$\\varphi$ bias', '[rad]'), ('$\\phi$ bias', '[rad]'), 
-    ('$c_{\\phi}$', '[-]')]
+    ('small step', '$\\tau$ [yr]'), ('two hop', '$\\tau$ [yr]'), ('$\\varphi$ bias', '[rad]'),
+    ('$\\phi$ bias', '[rad]'), ('$c_{\\phi}$', '[-]')]
 aspect = 0.75
 triangleparms = [
-    (180, cmap_cyclic, ['$-\\pi$', '0', '$\\pi$']), 
+    (180, cmap_cyclic, ['$-\\pi$', '0', '$\\pi$']),
     (45, cmap_clipped, ['$-\\pi/4$', '0', '$\\pi/4$'])]
 dps_labels = ['nearest', '1/2 yr', '1 yr', '3 yr']
 from matplotlib.cm import ScalarMappable
 import matplotlib.lines as mlines
 from matplotlib.colors import Normalize
 fig, axs = prepare_figure(
-    nrows=5, ncols=len(models), figsize=(2.04, 1.45), sharey='row', sharex='col', top=0.97, left=0.07, 
+    nrows=5, ncols=len(models), figsize=(2.04, 1.45), sharey='row', sharex='col', top=0.97, left=0.07,
     wspace=0.20, hspace=0.18, bottom=0.07, right=0.90)
-for ax in axs[2:, :].flatten():
+for ax in axs[2:,:].flatten():
     ax.set_box_aspect(aspect)
-
 
 for jmodel, model in enumerate(models):
     ex = CutOffExperiment(model, dps=dps, P=P, P_year=P_year)
     show_ylabel = False
     extent = xlim_year * 2
     triangle_experiment_plot(
-        ex, Basis=SmallStepBasis, ax=axs[0, jmodel], aspect=aspect, show_xticklabels=False, 
+        ex, Basis=SmallStepBasis, ax=axs[0, jmodel], aspect=aspect, show_xticklabels=False,
         ticks=xticks_year, vabs=triangleparms[0][0], cmap=triangleparms[0][1])
     triangle_experiment_plot(
-        ex, Basis=TwoHopBasis, ax=axs[1, jmodel], aspect=aspect, show_xticklabels=False, 
-        ticks=xticks_year, vabs=triangleparms[1][0], cmap=triangleparms[1][1])    
+        ex, Basis=TwoHopBasis, ax=axs[1, jmodel], aspect=aspect, show_xticklabels=False,
+        ticks=xticks_year, vabs=triangleparms[1][0], cmap=triangleparms[1][1])
     phase_error_plot(
         ex, ax=axs[2, jmodel], show_ylabel=show_ylabel, show_xlabel=False, show_xticklabels=False)
     phase_history_bias_plot(
@@ -74,13 +72,13 @@ for jax, ax in enumerate(axs[0:len(triangleparms), -1]):
     cax = ax.inset_axes(cax_limits)
     vabs = triangleparms[jax][0] / 180 * np.pi
     cbar = plt.colorbar(
-        ScalarMappable(norm=Normalize(vmin=-vabs, vmax=vabs), cmap=triangleparms[jax][1]), cax, shrink=0.5, 
+        ScalarMappable(norm=Normalize(vmin=-vabs, vmax=vabs), cmap=triangleparms[jax][1]), cax, shrink=0.5,
         orientation='vertical', ticks=[-vabs, 0, vabs])
     cbar.set_ticklabels(triangleparms[jax][2])
 ax = axs[-2, -1]
 handles = [mlines.Line2D([], [], color=c, label=l, lw=0.8) for l, c in zip(dps_labels, colslist)]
 ax.legend(
-    handles=handles, bbox_to_anchor=(1.05, 0.5), loc='center left', borderaxespad=0.0, frameon=False, 
+    handles=handles, bbox_to_anchor=(1.05, 0.5), loc='center left', borderaxespad=0.0, frameon=False,
     borderpad=0.3, handlelength=1.0, handletextpad=0.6)
 plt.show()
 
