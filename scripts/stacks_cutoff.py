@@ -31,5 +31,5 @@ for fn in fns:
     for metric in metrics:
         res[metric] = [metrics[metric].evaluate(ph[..., jdp,:], ph[..., -1,:])
                        for jdp, dp in enumerate(dps)]
-    save_object((ph, meta), (pout / 'metrics' / fn.stem).with_suffix('.p'))
+    save_object((res, meta), (pout / 'metrics' / fn.stem).with_suffix('.p'))
 
