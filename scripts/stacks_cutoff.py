@@ -5,8 +5,30 @@ Created on Nov 18, 2023
 '''
 
 from pathlib import Path
-from closig import save_object, load_object
+from closig import save_object, load_object, SmallStepBasis, TwoHopBasis
 from closig.experiments import CutOffDataExperiment, PeriodogramMetric, TrendSeasonalMetric
+
+import numpy as np
+
+def temporal_ml(fnim, lower=False):
+    C_vec = np.moveaxis(np.load(fnim), 0, -1)
+    P = int(-0.5 + np.sqrt(0.25 + 2 * C_vec.shape[-1]))
+    assert (P * (P+1)) // 2 == C_vec.shape[-1]
+    ind = np.tril_indices(P) if lower else np.triu_indices(P)
+    sigma = np.zeros(C_vec.shape[:-1], dtype=np.float64)
+    for jind in range(C_vec.shape[-1]):
+        if ind[0][jind] == ind[1][jind]:
+            sigma += np.abs(C_vec[..., jind])
+    sigma /= P
+    return sigma
+
+def evaluate_basis(fn, Basis):
+    from greg import extract_P
+    C_vec = np.moveaxis(np.load(fn), 0, -1)
+    P = extract_P(C_vec.shape[-1])
+    basis = Basis(P)
+    cclosures = basis.evaluate_covariance(C_vec, normalize=True, compl=True, vectorized=True)
+    return (basis, cclosures) 
 
 p0 = Path('/home2/Work/closig/')
 # p0 = Path('/home/simon/Work/closig')
@@ -18,6 +40,8 @@ overwrite = False
 
 metrics = {'trend': TrendSeasonalMetric(P_year=P_year), 'psd': PeriodogramMetric(P_year=P_year)}
 meta = {'P_year': P_year, 'dps': dps, add_full: add_full}
+Bases = {'small steps': SmallStepBasis, 'two hops': TwoHopBasis}
+
 fns = list(pin.glob('*.npy'))
 
 for fn in fns:
@@ -28,8 +52,21 @@ for fn in fns:
         save_object((ph, meta), fnout)
     ph = load_object(fnout)[0]
     res = {}
-    for metric in metrics:
-        res[metric] = [metrics[metric].evaluate(ph[..., jdp,:], ph[..., -1,:])
-                       for jdp, dp in enumerate(dps)]
-    save_object((res, meta), (pout / 'metrics' / fn.stem).with_suffix('.p'))
-
+    fnmetrics = (pout / 'metrics' / fn.stem).with_suffix('.p')
+    if overwrite or not fnmetrics.exists(): 
+        for metric in metrics:
+            res[metric] = [metrics[metric].evaluate(ph[..., jdp,:], ph[..., -1,:])
+                               for jdp, dp in enumerate(dps)]
+        save_object((res, meta), fnmetrics)
+    fnml = (pout / 'ml' / fn.stem).with_suffix('.p')
+    if overwrite or not fnml.exists():
+        sigma = temporal_ml(fn, lower=False)
+        save_object(fnml, sigma)
+    fncclosures = (pout / 'cclosures' / fn.stem).with_suffix('.p')
+    res = {}
+    if overwrite or not fncclosures.exists():
+        for bn in Bases:
+            Basis = Bases[bn]
+            res[bn] = evaluate_basis(fn, Basis)
+        save_object(res, fncclosures) 
+    

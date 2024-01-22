@@ -7,7 +7,7 @@ Created on Nov 1, 2023
 from abc import abstractmethod
 import numpy as np
 
-from closig import EVDLinker, CutOffRegularizer
+from closig import EVDLinker, CutOffRegularizer, load_C
 from closig.experiments import PhaseHistoryMetric
 
 class Experiment():
@@ -120,9 +120,4 @@ class CutOffDataExperiment(CutOffExperiment):
         if add_full:
             dps = tuple(dps) + (C.shape[-1],)
         return cls(C, dps)
-        
-def load_C(fn):
-    from greg import assemble_tril
-    Cvec = np.moveaxis(np.load(fn), 0, -1)
-    C = assemble_tril(Cvec, lower=False)
-    return C        
+              

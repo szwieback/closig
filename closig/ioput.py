@@ -19,6 +19,12 @@ def save_object(obj, filename):
         f.write(
             zlib.compress(pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)))
 
+def load_C(fn):
+    from greg import assemble_tril
+    Cvec = np.moveaxis(np.load(fn), 0, -1)
+    C = assemble_tril(Cvec, lower=False)
+    return C  
+
 def load_object(filename):
     if filename.suffix == '.npy':
         return np.load(filename)

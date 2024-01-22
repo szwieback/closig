@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 # Covariance:
 # ..., P, P
 
-
 class Basis():
     def __init__(self, P):
         self.P = P
