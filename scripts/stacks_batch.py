@@ -75,8 +75,8 @@ if __name__ == '__main__':
     cmetrics = {
         'mean_2': (MeanClosureMetric(2, tolerance=0.5), 'small steps'),
         'mean_year': (MeanClosureMetric(P_year, tolerance=0.5), 'small steps'),
-        'psd_hyear': (PSDClosureMetric(P_year // 2, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops'),
-        'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops')}
+        'psd_hyear': (PSDClosureMetric(P_year / 2, P_year, tolerance=0.5), 'two hops'),
+        'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5), 'two hops')}
         # two hops to indicate inconsistency of long-term interferograms
     Bases = {'small steps': SmallStepBasis, 'two hops': TwoHopBasis}
 
@@ -85,4 +85,5 @@ if __name__ == '__main__':
     for fn in fns:
         print(fn)
         stack_batch(fn, p0 / 'processed/', metrics, Bases, cmetrics, overwrite=False)
+
         

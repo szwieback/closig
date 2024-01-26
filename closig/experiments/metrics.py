@@ -130,11 +130,11 @@ class PSDClosureMetric(ClosureMetric):
         ind = self._tau_ind(basis, self.tau, self.tolerance)
         t_y = (basis.pt)[ind] / self.P_year
         assert np.std(np.diff(t_y)) < 1e-6  # equal sampling
-        mask = np.any(np.logical_not(np.isfinite(cclosures)), axis=0)
-        cclosures[:, mask] = 0
-        f, p = periodogram(cclosures, axis=0, nfft=basis.P, fs=self.P_year, return_onesided=False)
+        cclind = cclosures[ind, ...].copy()
+        mask = np.any(np.logical_not(np.isfinite(cclind)), axis=0)
+        cclind[:, mask] = 0
+        f, p = periodogram(cclind, axis=0, nfft=basis.P, fs=self.P_year, return_onesided=False)
         p[:, mask] = np.nan
-        cclosures[:, mask] = np.nan
         f, p = fftshift(f), fftshift(p, axes=0)
         ind_f = (np.abs(f - 1) < self.f_tolerance)
         p_enh = np.mean(p[ind_f, ...], axis=0) / np.mean(p, axis=0)
