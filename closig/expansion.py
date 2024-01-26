@@ -68,7 +68,7 @@ class Basis():
             if np.abs(edge[2]) != 1:
                 raise ValueError("Only pure cycles supported")
             gcoh *= g
-        return gcoh
+        return gcoh.astype(np.complex64)
 
     def _evaluate_covariance(
             self, C, covector, normalize=False, compl=False, vectorized=False, forward_only=False):
@@ -94,8 +94,9 @@ class Basis():
         if covector is not None:
             return _eval(covector)
         else:
-            gcohs = [_eval(covector) for covector in self.covectors]
-            return np.array(gcohs)
+            gcohs = np.array([_eval(covector) for covector in self.covectors])
+            print(gcohs.shape)
+            return gcohs
 
     def _test_number(self):
         assert len(self.covectors) == (self.P - 1) * (self.P - 2) / 2
@@ -189,25 +190,3 @@ class TwoHopBasis(Basis):
         return [(pt - hminus, pt, 1), (pt, pt + hplus, 1), (pt - hminus, pt + hplus, -1)]
 
 
-if __name__ == '__main__':
-    L = 40
-    P = 4
-    S = 20
-    # y = np.random.normal(size=(S, L, P)) + 1j * np.random.normal(size=(S, L, P))
-    # C = np.mean(y[..., np.newaxis] * y[..., np.newaxis,:].conj(), axis=-3)
-    # print(C.shape)
-    # ss_covectors(P)
-    # for P in range(3, 5):
-    #     b = TwoHopBasis(P)
-    #     print(P, len(b.covectors))
-    #     b._test_dimension()
-    #     b._test_number()
-
-    P = 91
-    b = TwoHopBasis(P)
-    for p0 in range(P):
-        for p1 in range(p0, P):
-            print(p0, p1, b._std_basis_vec(p0, p1))
-    print(P * (P+1) / 2)
-
-    # std_basis_Cvec

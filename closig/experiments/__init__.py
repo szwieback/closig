@@ -4,7 +4,8 @@ Created on Nov 1, 2023
 @author: simon
 '''
 from closig.experiments.metrics import (
-    PhaseHistoryMetric, CosMetric, MeanDeviationMetric, PeriodogramMetric, TrendSeasonalMetric)
+    PhaseHistoryMetric, CosMetric, MeanDeviationMetric, PeriodogramMetric, TrendSeasonalMetric,
+    MeanClosureMetric, PSDClosureMetric)
 from closig.experiments.experiment import Experiment, CutOffExperiment, CutOffDataExperiment
 from closig.experiments.catalog import model_catalog
 from closig.experiments.plots import (
