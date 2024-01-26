@@ -31,31 +31,11 @@ def evaluate_basis(fn, Basis):
     cclosures = basis.evaluate_covariance(C_vec, normalize=True, compl=True, vectorized=True)
     return (basis, cclosures) 
 
-p0 = Path('/home2/Work/closig/')
-# p0 = Path('/home/simon/Work/closig')
-pin = p0 / 'stacks'
-pout = p0 / 'processed/'
-dps, add_full = (1, 16, 31), True
-P_year = 30.4
-overwrite = False
-
-metrics = {'trend': TrendSeasonalMetric(P_year=P_year), 'psd': PeriodogramMetric(P_year=P_year)}
-cmetrics = {'mean_2': (MeanClosureMetric(2, tolerance=0.5), 'small steps'),
-            'mean_year': (MeanClosureMetric(P_year, tolerance=0.5), 'small steps'),
-            'psd_hyear': (PSDClosureMetric(P_year // 2, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops'),
-            'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops')}
-            # two hops to indicate inconsistency of long-term interferograms
-meta = {'P_year': P_year, 'dps': dps, add_full: add_full}
-Bases = {'small steps': SmallStepBasis, 'two hops': TwoHopBasis}
-
-fns = list(pin.glob('*.npy'))
-
-for fn in fns:
-    print(fn)
+def stack_batch(fn, pout, metrics, Bases, cmetrics, N_jobs=48, overwrite=False):
     fnout = (pout / 'phasehistory' / fn.stem).with_suffix('.p')
     if overwrite or not fn.exists():
-        ex = CutOffDataExperiment.from_file(fn, dps=dps, add_full=add_full)
-        ph = ex.phase_history(N_jobs=48)
+        ex = CutOffDataExperiment.from_file(fn, dps=meta['dps'], add_full=meta['add_full'])
+        ph = ex.phase_history(N_jobs=N_jobs)
         save_object((ph, meta), fnout)
     ph = load_object(fnout)[0]
     res = {}
@@ -83,6 +63,25 @@ for fn in fns:
         for cmname in cmetrics:
             basisname = cmetrics[cmname][1]
             res_cm[cmname] = cmetrics[cmname][0].evaluate(*res[basisname])
-        save_object(res_cm, fncmetrics)
-    
-    
+        save_object(res_cm, fncmetrics)    
+
+if __name__ == '__main__':
+    p0 = Path('/home2/Work/closig/')
+    # p0 = Path('/home/simon/Work/closig')
+
+    P_year = 30.4
+    meta = {'P_year': P_year, 'dps': (1, 16, 31), 'add_full': True}
+    metrics = {'trend': TrendSeasonalMetric(P_year=P_year), 'psd': PeriodogramMetric(P_year=P_year)}
+    cmetrics = {'mean_2': (MeanClosureMetric(2, tolerance=0.5), 'small steps'),
+                'mean_year': (MeanClosureMetric(P_year, tolerance=0.5), 'small steps'),
+                'psd_hyear': (PSDClosureMetric(P_year // 2, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops'),
+                'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops')}
+                # two hops to indicate inconsistency of long-term interferograms
+    Bases = {'small steps': SmallStepBasis, 'two hops': TwoHopBasis}
+
+    fns = list((p0 / 'stacks').glob('*.npy'))
+
+    for fn in fns:
+        print(fn)
+        stack_batch(fn, p0 / 'processed/', metrics, Bases, cmetrics, overwrite=False)
+        
