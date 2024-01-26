@@ -41,7 +41,9 @@ overwrite = False
 
 metrics = {'trend': TrendSeasonalMetric(P_year=P_year), 'psd': PeriodogramMetric(P_year=P_year)}
 cmetrics = {'mean_2': (MeanClosureMetric(2, tolerance=0.5), 'small steps'),
-            'psd_seasonal': (PSDClosureMetric(P_year // 2, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops')}
+            'mean_year': (MeanClosureMetric(P_year, tolerance=0.5), 'small steps'),
+            'psd_hyear': (PSDClosureMetric(P_year // 2, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops'),
+            'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops')}
             # two hops to indicate inconsistency of long-term interferograms
 meta = {'P_year': P_year, 'dps': dps, add_full: add_full}
 Bases = {'small steps': SmallStepBasis, 'two hops': TwoHopBasis}
@@ -50,19 +52,19 @@ fns = list(pin.glob('*.npy'))
 
 for fn in fns:
     print(fn)
-    # fnout = (pout / 'phasehistory' / fn.stem).with_suffix('.p')
-    # if overwrite or not fn.exists():
-    #     ex = CutOffDataExperiment.from_file(fn, dps=dps, add_full=add_full)
-    #     ph = ex.phase_history(N_jobs=48)
-    #     save_object((ph, meta), fnout)
-    # ph = load_object(fnout)[0]
-    # res = {}
-    # fnmetrics = (pout / 'metrics' / fn.stem).with_suffix('.p')
-    # if overwrite or not fnmetrics.exists(): 
-    #     for metric in metrics:
-    #         res[metric] = [metrics[metric].evaluate(ph[..., jdp,:], ph[..., -1,:])
-    #                            for jdp, dp in enumerate(dps)]
-    #     save_object((res, meta), fnmetrics)
+    fnout = (pout / 'phasehistory' / fn.stem).with_suffix('.p')
+    if overwrite or not fn.exists():
+        ex = CutOffDataExperiment.from_file(fn, dps=dps, add_full=add_full)
+        ph = ex.phase_history(N_jobs=48)
+        save_object((ph, meta), fnout)
+    ph = load_object(fnout)[0]
+    res = {}
+    fnmetrics = (pout / 'metrics' / fn.stem).with_suffix('.p')
+    if overwrite or not fnmetrics.exists(): 
+        for metric in metrics:
+            res[metric] = [metrics[metric].evaluate(ph[..., jdp,:], ph[..., -1,:])
+                               for jdp, dp in enumerate(dps)]
+        save_object((res, meta), fnmetrics)
     fnml = (pout / 'ml' / fn.stem).with_suffix('.p')
     if overwrite or not fnml.exists():
         sigma = temporal_ml(fn, lower=False)
@@ -74,13 +76,13 @@ for fn in fns:
             Basis = Bases[bn]
             res[bn] = evaluate_basis(fn, Basis)
         save_object(res, fncclosures)
-    else:
-        res = load_object(fncclosures)
     fncmetrics = (pout / 'cmetrics' / fn.stem).with_suffix('.p')
-    res_cm = {}
-    for cmname in cmetrics:
-        basisname = cmetrics[cmname][1]
-        res_cm[cmname] = cmetrics[cmname][0].evaluate(*res[basisname])
-    save_object(res_cm, fncmetrics)
+    if overwrite or not fncmetrics.exists():
+        res = load_object(fncclosures)
+        res_cm = {}
+        for cmname in cmetrics:
+            basisname = cmetrics[cmname][1]
+            res_cm[cmname] = cmetrics[cmname][0].evaluate(*res[basisname])
+        save_object(res_cm, fncmetrics)
     
     
