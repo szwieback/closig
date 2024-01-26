@@ -43,7 +43,7 @@ def stack_batch(fn, pout, metrics, Bases, cmetrics, N_jobs=48, overwrite=False):
     if overwrite or not fnmetrics.exists(): 
         for metric in metrics:
             res[metric] = [metrics[metric].evaluate(ph[..., jdp,:], ph[..., -1,:])
-                               for jdp, dp in enumerate(dps)]
+                               for jdp, dp in enumerate(meta['dps'])]
         save_object((res, meta), fnmetrics)
     fnml = (pout / 'ml' / fn.stem).with_suffix('.p')
     if overwrite or not fnml.exists():
@@ -72,11 +72,12 @@ if __name__ == '__main__':
     P_year = 30.4
     meta = {'P_year': P_year, 'dps': (1, 16, 31), 'add_full': True}
     metrics = {'trend': TrendSeasonalMetric(P_year=P_year), 'psd': PeriodogramMetric(P_year=P_year)}
-    cmetrics = {'mean_2': (MeanClosureMetric(2, tolerance=0.5), 'small steps'),
-                'mean_year': (MeanClosureMetric(P_year, tolerance=0.5), 'small steps'),
-                'psd_hyear': (PSDClosureMetric(P_year // 2, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops'),
-                'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops')}
-                # two hops to indicate inconsistency of long-term interferograms
+    cmetrics = {
+        'mean_2': (MeanClosureMetric(2, tolerance=0.5), 'small steps'),
+        'mean_year': (MeanClosureMetric(P_year, tolerance=0.5), 'small steps'),
+        'psd_hyear': (PSDClosureMetric(P_year // 2, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops'),
+        'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5, f_tolerance=0.1), 'two hops')}
+        # two hops to indicate inconsistency of long-term interferograms
     Bases = {'small steps': SmallStepBasis, 'two hops': TwoHopBasis}
 
     fns = list((p0 / 'stacks').glob('*.npy'))
