@@ -95,7 +95,6 @@ class Basis():
             return _eval(covector)
         else:
             gcohs = np.array([_eval(covector) for covector in self.covectors])
-            print(gcohs.shape)
             return gcohs
 
     def _test_number(self):

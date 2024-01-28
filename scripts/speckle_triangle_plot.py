@@ -1,10 +1,9 @@
 from matplotlib import pyplot as plt
 import numpy as np
+from pathlib import Path
 
-from closig.experiments import (
-    CutOffExperiment, model_catalog, phase_error_plot, phase_history_bias_plot, phase_history_metric_plot,
-    triangle_experiment_plot)
-from closig.visualization import prepare_figure, cmap_clipped, cmap_cyclic, colslist, triangle_plot
+from closig.experiments import  CutOffExperiment, model_catalog
+from closig.visualization import prepare_figure, cmap_clipped, cmap_cyclic, triangle_plot
 from closig import TwoHopBasis, SmallStepBasis
 
 P = 91
@@ -17,7 +16,7 @@ xticks_year = (0, 1, 2, 3)
 
 model = model_catalog('decorrsoil', P_year=P_year, band='C')
 ylabels = [
-    ('small step', '[yr]'), ('two hop', '[yr]')]
+    ('small step', '$\\tau$ [yr]'), ('two hop', '$ \\tau$ [yr]')]
 aspect = 0.75
 triangleparms = [
     (180, cmap_cyclic, ['$-\\pi$', '0', '$\\pi$']),
@@ -63,5 +62,5 @@ for jax, ax in enumerate(axs[0:len(triangleparms), -1]):
         ScalarMappable(norm=Normalize(vmin=-vabs, vmax=vabs), cmap=triangleparms[jax][1]), cax, shrink=0.5,
         orientation='vertical', ticks=[-vabs, 0, vabs])
     cbar.set_ticklabels(triangleparms[jax][2])
-plt.show()
+fig.savefig(Path('/home/simon/Work/closig/figures')/ 'triangle_speckle.pdf')
 

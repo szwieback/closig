@@ -124,7 +124,7 @@ class PSDClosureMetric(ClosureMetric):
         self.tolerance = tolerance
         self.f_tolerance=f_tolerance
         
-    def evaluate(self, basis, cclosures, **kwargs):
+    def _periodogram(self, basis, cclosures, **kwargs):
         from scipy.signal import periodogram
         from scipy.fft import fftshift
         ind = self._tau_ind(basis, self.tau, self.tolerance)
@@ -136,7 +136,11 @@ class PSDClosureMetric(ClosureMetric):
         f, p = periodogram(cclind, axis=0, nfft=basis.P, fs=self.P_year, return_onesided=False)
         p[:, mask] = np.nan
         f, p = fftshift(f), fftshift(p, axes=0)
-        ind_f = (np.abs(f - 1) < self.f_tolerance)
+        return f, p        
+        
+    def evaluate(self, basis, cclosures, **kwargs):
+        f, p = self._periodogram(basis, cclosures, **kwargs)
+        ind_f = np.logical_or((np.abs(f - 1) < self.f_tolerance), (np.abs(f + 1) < self.f_tolerance))
         p_enh = np.mean(p[ind_f, ...], axis=0) / np.mean(p, axis=0)
         return p_enh
         

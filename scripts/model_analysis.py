@@ -75,7 +75,7 @@ if __name__ == '__main__':
     from closig import TwoHopBasis, SmallStepBasis
     from closig.experiments import model_catalog
     import numpy as np
-    P = 91
+    P = 92
     P_year = 30
     ticks = np.array([0, 30, 60, 90]) + 1
     ticklabels = [0, 1, 2, 3]
@@ -88,4 +88,6 @@ if __name__ == '__main__':
         'differential subsidence': m[0], 'soil': m[3], 'seasonal vegetation': m[1]}    
     fnout = '/home/simon/Work/closig/figures/model.pdf'
     double_plot(bases, models, fnout=fnout, ticks=ticks, ticklabels=ticklabels)
-
+    
+    # if model_comparison plot insufficient
+    # change to two different cbars, with small step top, two hop bottom, closure and forw. error side by side

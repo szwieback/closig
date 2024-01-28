@@ -8,7 +8,7 @@ def real_closures(cclosures):
 from closig.visualization.plotting import cmap_cyclic
 
 def triangle_plot(
-        basis, cclosures, cclosures_ref=None, ax=None, osf=4, aspect=0.75, vabs=None, cmap=None,
+        basis, cclosures, cclosures_ref=None, ax=None, fs=1.0, osf=4, aspect=0.75, vabs=None, cmap=None,
         vabs_ref=None, ticks=None, ticklabels=None, show_xticklabels=True, show_yticklabels=True,
         remove_spines=True, blabel=None, plabel=None, show_labels=False, cbar=True, extent=None):
     from scipy.interpolate import griddata
@@ -16,9 +16,9 @@ def triangle_plot(
         fig, ax = plt.subplot(1, 1)
     if cmap is None:
         cmap = cmap_cyclic
-    pt, ptau = basis.pt, basis.ptau
-    ptr = np.arange(min(pt), max(pt), step=1 / osf)
-    ptaur = np.arange(min(ptau), max(ptau), step=0.5 / osf)
+    pt, ptau = np.array(basis.pt) / fs, np.array(basis.ptau) / fs
+    ptr = np.arange(min(pt), max(pt), step=1 / (osf * fs))
+    ptaur = np.arange(min(ptau), max(ptau), step=0.5 / (osf * fs))
     mg = tuple(np.meshgrid(ptr, ptaur))
     closures = real_closures(cclosures)
     closure_grid = griddata(np.stack((pt, ptau), axis=1),
@@ -35,7 +35,8 @@ def triangle_plot(
     if vabs is None:
         vabs = np.nanmax(np.abs(closure_grid))
     P = basis.P
-    if extent is None: extent = (1, P + 0.5, 1, P + 0.5)
+    # if extent is None: extent = (1, (P + 0.5) / fs, 1, (P + 0.5) / fs)
+    if extent is None: extent = (0, (P - 0.5) / fs, 0, (P - 0.5) / fs)
     if ticks is not None:
         ax.set_xticks(ticks)
         ax.set_yticks(ticks)
@@ -48,7 +49,7 @@ def triangle_plot(
         ax.set_xticklabels([])
     if not show_yticklabels:
         ax.set_yticklabels([])
-    
+
     from matplotlib.colors import Normalize
     if cclosures_ref is None:
         norm = Normalize(-vabs, vabs, clip=True)

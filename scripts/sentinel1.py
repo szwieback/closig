@@ -16,8 +16,8 @@ from matplotlib import colors
 import colorcet as cc
 
 
-def plot_triangles(roi, p0, pfig):
-    
+def plot_triangles(roi, p0, pfig, fs=1.0, ticks=None):
+    # f_s: sampling frequency
     fns = p0 / f'{roi}.npy'
     pfig.mkdir(exist_ok=True)
     Cvec = np.moveaxis(np.load(fns), 0, -1)
@@ -30,18 +30,21 @@ def plot_triangles(roi, p0, pfig):
     for jbase, basename in enumerate(bases):
         b, ax = bases[basename], axs[jbase]
         cclosures = b.evaluate_covariance(Cvec, normalize=True, compl=True, vectorized=True)
-        triangle_plot(b, np.mean(cclosures, axis=(1, 2)), ax=ax, vabs=vabs[basename], cmap=cmaps[basename])
+        meancc = np.mean(cclosures, axis=(1, 2))
+        triangle_plot(
+            b, meancc, ax=ax, vabs=vabs[basename], cmap=cmaps[basename], fs=fs, ticks=ticks)
         ax.text(0.50, 1.05, basename, ha='center', va='baseline', transform=ax.transAxes)
-        ax.text(0.50, -0.34, 'time $t$ [scene]', ha='center', va='baseline', transform=ax.transAxes)
+        ax.text(0.50, -0.34, 'time $t$ [year]', ha='center', va='baseline', transform=ax.transAxes)
     axs[0].text(
-        -0.20, 0.50, 'time scale $\\tau$ [scene]', ha='right', va='center', transform=axs[0].transAxes, 
+        -0.23, 0.50, 'time scale $\\tau$ [year]', ha='right', va='center', transform=axs[0].transAxes, 
         rotation=90)
     print(pfig / f'{roi}.pdf')
     fig.savefig(pfig / f'{roi}.pdf', dpi=450)
     
 if __name__ == '__main__':
-    rois = ['Colorado_rocky', 'Colorado_mountains', 'Colorado_grass', 'Colorado_fields']
-    # rois = ['NewMexico_dissected', 'NewMexico_flat', 'NewMexico_mountain', 'NewMexico_eroded']
-    rois = ['Wevok_toeslope', 'Wevok_hillslope', 'Wevok_rolling', 'Wevok_mountains']    
+    rois = (['Colorado_rocky', 'Colorado_mountains', 'Colorado_grass', 'Colorado_fields']
+            + ['NewMexico_dissected', 'NewMexico_flat', 'NewMexico_mountain', 'NewMexico_eroded'])
+    P_year = 30.4
+    ticks = [0, 1, 2, 3] 
     for roi in rois:
-        plot_triangles(roi, p0, pfig)
+        plot_triangles(roi, p0, pfig, fs=P_year, ticks=ticks)

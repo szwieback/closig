@@ -75,9 +75,13 @@ if __name__ == '__main__':
     cmetrics = {
         'mean_2': (MeanClosureMetric(2, tolerance=0.5), 'small steps'),
         'mean_year': (MeanClosureMetric(P_year, tolerance=0.5), 'small steps'),
+        'psd_qyear': (PSDClosureMetric(P_year / 4, P_year, tolerance=0.5), 'two hops'),
         'psd_hyear': (PSDClosureMetric(P_year / 2, P_year, tolerance=0.5), 'two hops'),
-        'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5), 'two hops')}
-        # two hops to indicate inconsistency of long-term interferograms
+        'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5), 'two hops'),
+        'psds_qyear': (PSDClosureMetric(P_year / 4, P_year, tolerance=0.5), 'small steps'),
+        'psds_hyear': (PSDClosureMetric(P_year / 2, P_year, tolerance=0.5), 'small steps'),
+        'psds_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5), 'small steps')}
+        # two hops to indicate inconsistency of long-term interferograms; compare half year to full year amplitude
     Bases = {'small steps': SmallStepBasis, 'two hops': TwoHopBasis}
 
     fns = list((p0 / 'stacks').glob('*.npy'))
