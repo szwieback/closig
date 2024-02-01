@@ -101,7 +101,14 @@ class CutOffExperiment(Experiment):
             [EVDLinker(CutOffRegularizer(dp, enforce_dnn=False)).link(_C, N_jobs=N_jobs) 
              for dp in dps], axis=-2)
         return ph
-
+    
+    def phase_history_difference(self, C=None, dps=None, dp0=None, corr=True, N_jobs=1):
+        if dps is None: dps = self.dps[:-1]
+        if dp0 is None: dp0 = self.dps[-1]
+        _dps = dps + [dp0]
+        ph = self.phase_history(C=C, dps=_dps, corr=corr, N_jobs=N_jobs)
+        phd = ph[..., :-1, :] * ph[..., -1, :][..., np.newaxis, :].conj() 
+        return phd
 
 class CutOffDataExperiment(CutOffExperiment):
     def __init__(self, C, dps):

@@ -3,26 +3,30 @@ import numpy as np
 
 from closig.experiments import (
     CutOffExperiment, model_catalog, phase_error_plot, phase_history_bias_plot, phase_history_metric_plot,
-    triangle_experiment_plot)
+    triangle_experiment_plot, phase_history_difference_plot)
 from closig.visualization import prepare_figure, cmap_clipped, cmap_cyclic, colslist
 from closig import TwoHopBasis, SmallStepBasis
 
 P = 91
 P_year = 30
-dps = [1, 15, 30, 90]
+dps = [1, 15, 90]#[1, 15, 30, 90]
 xlim_year = (0, P / P_year)
 xticks_year = (0, 1, 2, 3)
 
 modelp = model_catalog('precipsoil', P_year=P_year, band='C')
 modelss = model_catalog('seasonalsoil', P_year=P_year, band='C')
 modelps = model_catalog('seasonalprecipsoil', P_year=P_year, band='C')
-models = model_catalog('seasonalveg', P_year=P_year, band='C')
+modelhs = model_catalog('harmonicsoil', P_year=P_year, band='C')
+modelsv = model_catalog('seasonalveg', P_year=P_year, band='C')
 modelt = model_catalog('seasonaltrendveg', P_year=P_year, band='C')
 modeld = model_catalog('diffdisp', P_year=P_year, band='C')
 
-models = [modelp, modelss, modelps, models, modelt, modeld]
+models = [modelp, modelhs, modelps, modelsv, modelt, modeld]
+# seasonal veg model demonstrate that consistent long-term interferograms are insufficient [as they are all wrong; substantial closure errors at tau approx 1/2 yr]
+ 
+
 headers = [
-    'event SM', 'seasonal SM', 'harmonic SM', 'seasonal veg.',
+    'event SM', 'harmonic SM', 'seasonal SM', 'seasonal veg.',
     'growing veg.', 'differential motion']
 ylabels = [
     ('small step', '$\\tau$ [yr]'), ('two hop', '$\\tau$ [yr]'), ('$\\varphi$ bias', '[rad]'),
@@ -31,12 +35,12 @@ aspect = 0.75
 triangleparms = [
     (180, cmap_cyclic, ['$-\\pi$', '0', '$\\pi$']),
     (45, cmap_clipped, ['$-\\pi/4$', '0', '$\\pi/4$'])]
-dps_labels = ['nearest', '1/2 yr', '1 yr', '3 yr']
+dps_labels =['nearest', '1/2 yr', '3 yr']# ['nearest', '1/2 yr', '1 yr', '3 yr']
 from matplotlib.cm import ScalarMappable
 import matplotlib.lines as mlines
 from matplotlib.colors import Normalize
 fig, axs = prepare_figure(
-    nrows=5, ncols=len(models), figsize=(2.04, 1.35), sharey='row', sharex='col', top=0.97, left=0.06,
+    nrows=5, ncols=len(models), figsize=(2.04, 1.38), sharey='row', sharex='col', top=0.97, left=0.06,
     wspace=0.20, hspace=0.18, bottom=0.07, right=0.91)
 for ax in axs[2:,:].flatten():
     ax.set_box_aspect(aspect)
@@ -55,7 +59,10 @@ for jmodel, model in enumerate(models):
         ex, ax=axs[2, jmodel], show_ylabel=show_ylabel, show_xlabel=False, show_xticklabels=False)
     phase_history_bias_plot(
         ex, ax=axs[3, jmodel], show_ylabel=show_ylabel, show_xlabel=False, show_xticklabels=False)
-    phase_history_metric_plot(ex, ax=axs[4, jmodel], show_ylabel=show_ylabel, show_xticklabels=False)
+    # phase_history_difference_plot(
+    #     ex, ax=axs[3, jmodel], show_ylabel=show_ylabel, show_xlabel=False, show_xticklabels=False)
+    phase_history_metric_plot(
+        ex, ax=axs[4, jmodel], show_ylabel=show_ylabel, show_xticklabels=False, y_xlab=-0.53)
     for ax in axs[-3:, jmodel]:
         ax.set_xticks(xticks_year)
         ax.set_xlim(xlim_year)

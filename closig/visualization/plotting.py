@@ -17,7 +17,7 @@ globfigparams = {
     'fontcolour': '#666666', 'tickdirection': 'out', 'linewidth': 0.5,
     'ticklength': 2.50, 'minorticklength': 1.1}
 
-colslist = ['#2c334f', '#90845b', '#8f605a', '#deafda', '#aaaaaa', '#dddddd']
+colslist = ['#2c334f', '#90845b',  '#deafda', '#8f605a','#aaaaaa', '#dddddd']
 cmap_cyclic = cc.cm['CET_C1']
 cmap_clipped = colors.LinearSegmentedColormap.from_list('clipped', cmap_cyclic(np.linspace(0.2, 0.8, 256)))
 

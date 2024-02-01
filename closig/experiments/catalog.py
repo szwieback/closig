@@ -15,9 +15,9 @@ def model_catalog(scenario, P_year=30, band='C'):
     h = 0.4
     n_mean = 1.05 - 0.0010j
     n_amp = 0.01 - 0.0002j
-    n_std = 0.002
+    n_std = 0.001
     if scenario == 'diffdisp':
-        dz = -0.025 / P_year
+        dz = -0.02 / P_year
         coh0 = 0.3 # expect phase linking error to increase with coh0 for tau >> 1
         dcoh = 0.6
         center = HomogSoilLayer(dz=0, coh0=coh0, dcoh=dcoh)
@@ -25,19 +25,21 @@ def model_catalog(scenario, P_year=30, band='C'):
         fractions = [0.8, 0.2]
         model = TiledModel([center, trough], fractions=fractions, geom=geom)
     elif scenario in ('seasonalveg', 'seasonaltrendveg'):
-        n_t = {'seasonalveg': 0.0, 'seasonaltrendveg': 0.01}[scenario]
+        n_t = {'seasonalveg': 0.0, 'seasonaltrendveg': 0.03/3}[scenario]
+        # dcoh = 0.6
         svl = SeasonalVegLayer(
-            n_mean=n_mean, n_amp=n_amp, n_std=n_std, n_t=n_t, density=1/h, dcoh=0.6, P_year=P_year, h=h)
-        sl = HomogSoilLayer()
+            n_mean=n_mean, n_amp=n_amp, n_std=n_std, n_t=n_t, density=1/h, dcoh=0.7, P_year=P_year, h=h)
+        sl = HomogSoilLayer(coh0=0.6)
         model = LayeredCovModel([svl, sl])
-    elif scenario in ('precipsoil', 'seasonalprecipsoil', 'seasonalsoil', 'decorrsoil'):
+    elif scenario in ('precipsoil', 'seasonalprecipsoil', 'harmonicsoil', 'seasonalsoil', 'decorrsoil'):
         if scenario == 'precipsoil':
             sl = PrecipScattSoilLayer(
                 interval=10, tau=1, dcoh=0.8, coh0=0.1)
-        elif scenario == 'seasonalsoil':
+        elif scenario == 'seasonalsoil' or scenario == 'harmonicsoil':
+            period = {'seasonalsoil': P_year, 'harmonicsoil': 10}
             P_max = 128
             dielModel = DobsonDielectric()
-            state = 0.2 + 0.1 * np.cos(2 * np.pi * np.arange(P_max) / P_year)
+            state = 0.2 - 0.1 * np.cos(2 * np.pi * np.arange(P_max) / period[scenario])
             n = np.array([dielModel.n(s) for s in state])
             sl = ScattSoilLayer(n=n, dcoh=0.8, coh0=0.1)
         elif scenario == 'seasonalprecipsoil':

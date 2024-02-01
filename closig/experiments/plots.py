@@ -78,6 +78,39 @@ def phase_history_bias_plot(
         ax.set_xticklabels([])        
     return ax
 
+
+def phase_history_difference_plot(
+        ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None, 
+        show_xticklabels=True):
+    if cols is None: cols = [c for c in colslist]
+    if ax is None:
+        _, ax = prepare_figure()
+    phe = ex.phase_history_difference()
+    dps = ex.dps[:-1]
+    p_years = ex._dp_years(ex.p)
+    # ax.axhline(0.0, c='#666666', lw=0.5, alpha=0.1, zorder=2)
+    # ax.set_ylim((-np.pi, np.pi))
+    # ax.set_yticks((-np.pi, 0, np.pi))
+    # ax.set_yticklabels(('$-\\pi$', '0', '$\\pi$'))
+    for jdp, phe_dp in enumerate(phe):
+        col = cols[jdp]
+        angle_dp = np.angle(phe_dp)
+        mask_angle_dp = mask_angle(angle_dp)
+        ax.plot(p_years, mask_angle_dp, c=col, label=dps[jdp], lw=0.8)
+        ax.plot(
+            p_years[mask_angle_dp.mask], angle_dp[mask_angle_dp.mask], linestyle='none', ms=1, marker='o', 
+            mec='none', mfc=col)
+    if show_xlabel:
+        if y_xlab is None: y_xlab = y_xlab_def
+        ax.text(0.50, y_xlab, '$t$ [yr]', transform=ax.transAxes, va='baseline', ha='center')
+    if show_ylabel:
+        if x_ylab is None: x_ylab = x_ylab_def
+        ax.text(
+            x_ylab, 0.50, 'bias [rad]', transform=ax.transAxes, va='center', ha='right', rotation=90)
+    if not show_xticklabels:
+        ax.set_xticklabels([])        
+    return ax
+
 def phase_history_metric_plot(
         ex, ax=None, samples=64, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None,
         show_xticklabels=True):
