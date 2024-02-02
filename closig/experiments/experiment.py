@@ -60,8 +60,8 @@ class Experiment():
 
     def phase_error(self, C=None, p0=0):
         if C is None: C = self.C
-        ph = C[:,p0]
-        phd = self.Cd[:,p0]
+        ph = C[p0,:]
+        phd = self.Cd[p0,:]
         phe = ph * phd.conj() / np.abs(phd)
         return np.arange(len(ph)) - p0, phe
 
