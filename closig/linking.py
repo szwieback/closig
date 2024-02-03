@@ -8,21 +8,19 @@ from abc import abstractmethod
 import closig.graphs as graphs
 import numpy as np
 
-
 def restrict_kwargs(fun, kwargs):
     rkwargs = {k: v for k, v in kwargs.items(
     ) if k in fun.__code__.co_varnames}
     return rkwargs
 
-
 class Subsetter():
     '''
-        Subset a modeled covariance matrix given a maximum temporal baseline, or random sampling based 
-        on a graph representation of the InSAR network. This simulates an SBAS scenario where temporal baseline dependent velocity errors may arrise. 
+        Subset a modeled covariance matrix given a maximum temporal baseline, or random sampling based
+        on a graph representation of the InSAR network. This simulates an SBAS scenario where temporal baseline dependent velocity errors may arrise.
 
         This is a binary and stack-wise operation, thus it is distinct from the regularizer.
 
-        Not working yet, but the idea is to genrate random adjaceny matrices to test whether redunancy 
+        Not working yet, but the idea is to genrate random adjaceny matrices to test whether redunancy
         is key driver of velocity biases.
     '''
 
@@ -36,7 +34,7 @@ class Subsetter():
             returns instance of self
         '''
         k = np.random.uniform(high=1, low=0.5, size=1, seed=seed)
-        l = np.random.uniform(high=self.P-2, low=1, size=1, seed=seed)
+        l = np.random.uniform(high=self.P - 2, low=1, size=1, seed=seed)
         G, A = graphs.get_rand_graph(self.P, k=k, l=l)
         self.G = G
         return self
@@ -46,7 +44,6 @@ class Subsetter():
 
     def get_cycle_rank(self):
         return graphs.cycle_rank(self.G)
-
 
 class Regularizer():
     @abstractmethod
@@ -62,7 +59,6 @@ class Regularizer():
         mg = np.mgrid[0:P, 0:P]
         return np.abs(mg[1] - mg[0])
 
-
 class IdleRegularizer(Regularizer):
     '''
         No regularization.
@@ -74,7 +70,6 @@ class IdleRegularizer(Regularizer):
     def regularize(self, G, inplace=False):
         _G = G.copy() if not inplace else G
         return _G
-
 
 class CutOffRegularizer(Regularizer):
     '''
@@ -97,10 +92,9 @@ class CutOffRegularizer(Regularizer):
             mask = (self.distance_from_diagonal(
                 _G.shape[-1]) <= self.dp_cutoff)
             _G *= mask
-            if self.enforce_dnn: 
+            if self.enforce_dnn:
                 force_doubly_nonnegative(_G, inplace=True)
         return _G
-
 
 class Linker():
     @abstractmethod
@@ -119,7 +113,7 @@ class Linker():
         else:
             from joblib import Parallel, delayed
             C_obs_split = np.array_split(_C_obs, N_jobs)
-            G_split = np.array_split(G, N_jobs) if G is not None else (None, ) * N_jobs
+            G_split = np.array_split(G, N_jobs) if G is not None else (None,) * N_jobs
             def _link_single(n): return self._link_batch(C_obs_split[n], G_split[n], **kwargs)
             cphase = np.concatenate(
                 Parallel(n_jobs=N_jobs)(delayed(_link_single)(n) for n in range(N_jobs)))
@@ -161,7 +155,6 @@ class EMILinker(Linker):
         from greg import EMI
         return EMI(C_obs, G=G, corr=False)
 
-
 class EMILinker_py(EMILinker):
     def __init__(self, regularizer=None):
         if regularizer is not None:
@@ -173,18 +166,16 @@ class EMILinker_py(EMILinker):
         from greg import EMI_py as _EMI
         return _EMI(C_obs, G=G, corr=False)
 
-
 class NearestNeighborLinker(Linker):
     '''
         daisy chain or cumulative product of off-diagonal elements of the covariance matrix
     '''
 
     def _link(self, C_obs, G=None, corr=True, **kwargs):
-        ph_nn = np.ones(C_obs.shape[:-1], dtype=C_obs.dtype) 
+        ph_nn = np.ones(C_obs.shape[:-1], dtype=C_obs.dtype)
         ph_nn[..., 1:] = np.cumprod(np.diagonal(C_obs, 1, axis1=-2, axis2=-1), axis=-1)
         ph_nn /= np.abs(ph_nn)
         return ph_nn
-
 
 class EVDLinker(Linker):
     '''
@@ -205,11 +196,10 @@ class EVDLinker(Linker):
         cphase = EVD(C_obs, G=G, corr=False)
         return cphase
 
-
 if __name__ == '__main__':
-    eps = 0.4
-    C_obs = np.array([[3, 1j, eps + 1j], [-1j, 4, 1], [eps -1j, 1, 4]])[np.newaxis, ...]
+    eps = 0.0
+    C_obs = np.array([[3, 1j, eps + 1j], [-1j, 4, 1], [eps - 1j, 1, 4]])[np.newaxis, ...]
     ceig = EMILinker().link(C_obs)
-    print(ceig)
+    # add option to swap sign convention. start with NN
+    phase = np.angle(C_obs[0, 0,:])
 
-    

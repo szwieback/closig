@@ -18,10 +18,13 @@ def mask_angle(angle):
     return angle_arr
 
 def phase_error_plot(
-        ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, show_xticklabels=True):
+        ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, show_xticklabels=True,
+        phase_history_sign=False):
     if ax is None:
         _, ax = prepare_figure()
     dp, phe = ex.phase_error()
+    if phase_history_sign: # use phil - phi0 instead of phi0l = phi0 - phil
+        phe = phe.conj()
     dp_years = ex._dp_years(dp)
     angle_dp = np.angle(phe)
     mask_angle_dp = mask_angle(angle_dp)
@@ -48,7 +51,7 @@ def phase_error_plot(
 
 def phase_history_bias_plot(
         ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None, 
-        show_xticklabels=True):
+        show_xticklabels=True, flip_sign=True):
     if cols is None: cols = [c for c in colslist]
     if ax is None:
         _, ax = prepare_figure()

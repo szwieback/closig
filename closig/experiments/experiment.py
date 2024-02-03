@@ -123,8 +123,8 @@ class CutOffDataExperiment(CutOffExperiment):
     
     @classmethod
     def from_file(cls, fn, dps, add_full=False):
-        C = load_C (fn)
+        C = load_C(fn)
         if add_full:
             dps = tuple(dps) + (C.shape[-1],)
         return cls(C, dps)
-              
+

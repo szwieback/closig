@@ -11,7 +11,7 @@ from closig.experiments import MeanClosureMetric, PSDClosureMetric
 from closig.experiments.metrics import MeanClosureMetric
 
 p0 = Path('/home/simon/Work/closig/')
-roi = 'NewMexico'
+roi = 'Colorado'
 metrics = load_object(p0 / 'processed' / 'metrics' / f'{roi}.p')
 
 print(len(metrics[0]['trend']))
