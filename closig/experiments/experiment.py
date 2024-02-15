@@ -7,7 +7,7 @@ Created on Nov 1, 2023
 from abc import abstractmethod
 import numpy as np
 
-from closig import EVDLinker, CutOffRegularizer, load_C
+from closig import EVDLinker, CutOffRegularizer, load_C, NearestNeighborLinker
 from closig.experiments import PhaseHistoryMetric
 
 class Experiment():
@@ -73,13 +73,14 @@ class Experiment():
 
 
 class CutOffExperiment(Experiment):
-    def __init__(self, model, dps, P=90, P_year=30):
+    def __init__(self, model, dps, P=90, P_year=30, nn=True):
         self.dps = dps
         self.model = model
         self.P = P
         self.P_year = P_year
         self._Cd = model.covariance(P, coherence=True, displacement_phase=True)
         self.C = model.covariance(P, coherence=True)
+        self.nn = nn
 
     def _dp_years(self, dps=None):
         if dps is None: dps = self.dps
@@ -98,9 +99,15 @@ class CutOffExperiment(Experiment):
         if C is None: C = self.C
         _C = self._correlation_matrix(C, corr=corr)
         ph = np.stack(
-            [EVDLinker(CutOffRegularizer(dp, enforce_dnn=False)).link(_C, N_jobs=N_jobs) 
+            [self._linker(dp).link(_C, N_jobs=N_jobs) 
              for dp in dps], axis=-2)
         return ph
+    
+    def _linker(self, dp):
+        if dp > 1 or not self.nn:
+            return EVDLinker(CutOffRegularizer(dp, enforce_dnn=False))
+        else:
+            return NearestNeighborLinker() 
     
     def phase_history_difference(self, C=None, dps=None, dp0=None, corr=True, N_jobs=1):
         if dps is None: dps = self.dps[:-1]
@@ -111,11 +118,12 @@ class CutOffExperiment(Experiment):
         return phd
 
 class CutOffDataExperiment(CutOffExperiment):
-    def __init__(self, C, dps):
+    def __init__(self, C, dps, nn=True):
         self.dps = dps
         self.P = C.shape[-1]
         self.C = C
         self.P_year = None
+        self.nn = nn
         
     @property
     def Cd(self):

@@ -173,7 +173,9 @@ class NearestNeighborLinker(Linker):
 
     def _link(self, C_obs, G=None, corr=True, **kwargs):
         ph_nn = np.ones(C_obs.shape[:-1], dtype=C_obs.dtype)
-        ph_nn[..., 1:] = np.cumprod(np.diagonal(C_obs, 1, axis1=-2, axis2=-1), axis=-1)
+        Cd = np.diagonal(C_obs, -1, axis1=-2, axis2=-1).copy()
+        Cd /= np.abs(Cd)
+        ph_nn[..., 1:] = np.cumprod(Cd, axis=-1)
         ph_nn /= np.abs(ph_nn)
         return ph_nn
 
