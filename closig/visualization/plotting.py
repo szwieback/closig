@@ -20,6 +20,8 @@ globfigparams = {
 colslist = ['#2c334f', '#90845b',  '#deafda', '#8f605a','#aaaaaa', '#dddddd']
 cmap_cyclic = cc.cm['CET_C1']
 cmap_clipped = colors.LinearSegmentedColormap.from_list('clipped', cmap_cyclic(np.linspace(0.2, 0.8, 256)))
+cmap_div = cmap_clipped#cc.cm['CET_CBD2']
+cmap_mag = cc.cm['gray']#cc.cm['CET_CBL2']
 
 
 def initialize_matplotlib():

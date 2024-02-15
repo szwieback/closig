@@ -33,7 +33,7 @@ def evaluate_basis(fn, Basis):
 
 def stack_batch(fn, pout, metrics, Bases, cmetrics, N_jobs=48, overwrite=False):
     fnout = (pout / 'phasehistory' / fn.stem).with_suffix('.p')
-    if overwrite or not fn.exists():
+    if overwrite or not fnout.exists():
         ex = CutOffDataExperiment.from_file(fn, dps=meta['dps'], add_full=meta['add_full'])
         ph = ex.phase_history(N_jobs=N_jobs)
         save_object((ph, meta), fnout)
@@ -75,6 +75,7 @@ if __name__ == '__main__':
     cmetrics = {
         'mean_2': (MeanClosureMetric(2, tolerance=0.5), 'small steps'),
         'mean_year': (MeanClosureMetric(P_year, tolerance=0.5), 'small steps'),
+        'mean_year_th': (MeanClosureMetric(P_year, tolerance=0.5), 'two hops'),        
         'psd_qyear': (PSDClosureMetric(P_year / 4, P_year, tolerance=0.5), 'two hops'),
         'psd_hyear': (PSDClosureMetric(P_year / 2, P_year, tolerance=0.5), 'two hops'),
         'psd_year': (PSDClosureMetric(P_year, P_year, tolerance=0.5), 'two hops'),
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     fns = list((p0 / 'stacks').glob('*.npy'))
 
     for fn in fns:
-        print(fn)
+        # if 'NewMexico_barren' in str(fn) or 'NewMexico_shrubs' in str(fn):
         stack_batch(fn, p0 / 'processed/', metrics, Bases, cmetrics, overwrite=False)
 
         

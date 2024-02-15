@@ -51,7 +51,7 @@ def phase_error_plot(
 
 def phase_history_bias_plot(
         ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None, 
-        show_xticklabels=True, flip_sign=True):
+        show_xticklabels=True, alpha=None, flip_sign=True):
     if cols is None: cols = [c for c in colslist]
     if ax is None:
         _, ax = prepare_figure()
@@ -66,10 +66,10 @@ def phase_history_bias_plot(
         col = cols[jdp]
         angle_dp = np.angle(phe_dp)
         mask_angle_dp = mask_angle(angle_dp)
-        ax.plot(p_years, mask_angle_dp, c=col, label=dps[jdp], lw=0.8)
+        ax.plot(p_years, mask_angle_dp, c=col, label=dps[jdp], lw=0.8, alpha=alpha)
         ax.plot(
             p_years[mask_angle_dp.mask], angle_dp[mask_angle_dp.mask], linestyle='none', ms=1, marker='o', 
-            mec='none', mfc=col)
+            mec='none', mfc=col, alpha=alpha)
     if show_xlabel:
         if y_xlab is None: y_xlab = y_xlab_def
         ax.text(0.50, y_xlab, '$t$ [yr]', transform=ax.transAxes, va='baseline', ha='center')
@@ -116,7 +116,7 @@ def phase_history_difference_plot(
 
 def phase_history_metric_plot(
         ex, ax=None, samples=64, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None,
-        show_xticklabels=True):
+        alpha=None, show_xticklabels=True):
     if cols is None: cols = [c for c in colslist]
     if ax is None:
         _, ax = prepare_figure()
@@ -128,7 +128,7 @@ def phase_history_metric_plot(
 
     for jdp, m_dp in enumerate(metric):
         col = cols[jdp]
-        ax.plot(p_years, m_dp, c=col, label=dps[jdp], lw=0.8)
+        ax.plot(p_years, m_dp, c=col, label=dps[jdp], lw=0.8, alpha=alpha)
     ax.set_ylim((0, 1))
     ax.set_yticks((0, 1))
     if show_xlabel:

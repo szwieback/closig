@@ -10,4 +10,4 @@ from closig.experiments.experiment import Experiment, CutOffExperiment, CutOffDa
 from closig.experiments.catalog import model_catalog
 from closig.experiments.plots import (
     phase_error_plot, phase_history_bias_plot, phase_history_metric_plot, triangle_experiment_plot,
-    phase_history_difference_plot)
+    phase_history_difference_plot, mask_angle)

@@ -12,6 +12,7 @@ from matplotlib.colors import Normalize
 
 from closig import load_object
 from closig.visualization import prepare_figure, cmap_clipped, cmap_cyclic, colslist, triangle_plot
+from closig.experiments import mask_angle
 
 def read_stack(roi, p0):
     pp = p0 / 'processed'
@@ -29,14 +30,8 @@ def read_stack(roi, p0):
 lamb = 0.055
 conv = (lambda phi: phi * lamb / (4 * np.pi), lambda d: 4 * np.pi * d / lamb)
 
-if __name__ == '__main__':
-    p0 = Path('/home/simon/Work/closig/')
-    fnout = p0 / 'figures' / 'triangle_speckle.pdf'
-
-    rois = ['Colorado_grass', 'Colorado_mountains', 'NewMexico_flat', 'NewMexico_dissected']
-    # 'NewMexico_eroded' has seasonal variability in ph
-    headers = ['grassland CO', 'mountainous CO', 'semi-arid plain NM', 'dissected NM']
-
+def plot_stack_comparison(rois, headers=None, fnout=None):
+    if headers is None: headers=rois
     aspect = 0.75
     triangleparms = [
         (180, cmap_cyclic, ['$-\\pi$', '0', '$\\pi$']),
@@ -65,7 +60,12 @@ if __name__ == '__main__':
             for ax in axs[2:, jroi]:
                 ax.axhline(0.0, color='#666666', lw=0.5, alpha=0.1)
             for jdp in (2, 1, 0):
-                axs[2, jroi].plot(x, np.angle(res['phdiff'][jdp,:]), c=colslist[jdp], lw=0.6)
+                angle = np.angle(res['phdiff'][jdp,:])
+                anglem = mask_angle(angle)
+                axs[2, jroi].plot(x, anglem, c=colslist[jdp], lw=0.6)
+                axs[2, jroi].plot(
+                    x[anglem.mask], angle[anglem.mask], linestyle='none', ms=1, marker='o', 
+                    mec='none', mfc=colslist[jdp], alpha=1.0)                
             for jdp in (2, 1):
                 axs[3, jroi].plot(x, np.angle(res['phdiff'][jdp,:]), c=colslist[jdp], lw=0.6)
             axs[0, jroi].text(
@@ -77,7 +77,8 @@ if __name__ == '__main__':
         ax.set_xlim(0.0, 3.0)
     for ax in axs[0:2, 0]:
         ax.set_yticks([0, 1, 2, 3])
-    axs[2, 0].set_ylim(-1.86, 1.86)
+    # axs[2, 0].set_ylim(-1.86, 1.86)
+    axs[2, 0].set_ylim(-np.pi, np.pi)
     axs[3, 0].set_ylim(-np.pi / 8, np.pi / 8)
     for jax, ax in enumerate(axs[0:len(triangleparms), -1]):
         cax = ax.inset_axes(cax_limits)
@@ -87,23 +88,23 @@ if __name__ == '__main__':
             shrink=0.5, orientation='vertical', ticks=[-vabs, 0, vabs])
         cbar.set_ticklabels(triangleparms[jax][2])
     ax = axs[-2, -1]
-    ax.set_yticks((-np.pi / 2, 0, np.pi / 2))
-    ax.set_yticklabels(('$-\\frac{\\pi}{2}$', '0', '$\\frac{\\pi}{2}$'))
+    ax.set_yticks((-np.pi, 0, np.pi))
+    ax.set_yticklabels(('$-\\pi$', '0', '$\\pi$'))
     handles = [mlines.Line2D([], [], color=c, label=l, lw=0.8) for l, c in zip(dps_labels, colslist)]
     ax.legend(
         handles=handles, bbox_to_anchor=(cax_limits[0], -0.11), loc='center left', borderaxespad=0.0,
         frameon=False, borderpad=0.3, handlelength=1.0, handletextpad=0.6)
     secax = ax.secondary_yaxis('right', functions=conv)
-    secax.set_yticks((-5e-3, 0, 5e-3))
-    secax.set_yticklabels((-5, 0, 5))
+    secax.set_yticks((-1e-2, 0, 1e-2))
+    secax.set_yticklabels((-1, 0, 1))
     ax = axs[-1, -1]
     ax.set_yticks((-np.pi / 8, 0, np.pi / 8))
     ax.set_yticklabels(('$-\\frac{\\pi}{8}$', '0', '$\\frac{\\pi}{8}$'))
     secax2 = ax.secondary_yaxis('right', functions=conv)
     secax2.set_yticks((-1e-3, 0, 1e-3))
     secax2.set_yticklabels((-1, 0, 1))
-    for ax in axs[-2:, -1]:
-        ax.text(1.24, 0.50, '[mm]', rotation=270, ha='left', va='center', transform=ax.transAxes)
+    for lab, ax in zip(['[cm]', '[mm]'], axs[-2:, -1]):
+        ax.text(1.24, 0.50, lab, rotation=270, ha='left', va='center', transform=ax.transAxes)
     ylabels = [
         ('small step', '$\\tau$ [yr]'), ('two hop', '$\\tau$ [yr]'),
         ('$\\phi$ bias', '[rad]'), ('$\\phi$ bias', '[rad]')]
@@ -111,5 +112,18 @@ if __name__ == '__main__':
         ylabell, ylabelr = ylabels[jax]
         ax.text(-0.41, 0.50, ylabell, ha='right', va='center', transform=ax.transAxes, rotation=90)
         ax.text(-0.26, 0.50, ylabelr, ha='right', va='center', transform=ax.transAxes, rotation=90)
+    if fnout is None:
+        plt.show()
+    else:
+        plt.savefig(fnout, dpi=450)
 
-    plt.show()
+if __name__ == '__main__':
+    p0 = Path('/home/simon/Work/closig/')
+    fnout = p0 / 'figures' / 'triangle_stacks.pdf'
+
+    rois = ['Colorado_grass', 'Colorado_mountains', 'NewMexico_shrubs', 'NewMexico_dissected']
+    # 'NewMexico_eroded' has seasonal variability in ph
+    headers = ['grassland CO', 'mountainous CO', 'shrubs NM', 'dissected NM']
+    
+    plot_stack_comparison(rois, headers=headers, fnout=fnout)
+

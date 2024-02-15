@@ -17,7 +17,7 @@ N = int(1 / 2 + np.sqrt((1 / 4) + 2 * D))
 arcs = np.array([(n0, n1) for n0 in range(N) for n1 in range(n0, N)])
 
 rois = {'grass': (230, 300, 260, 320), 'mountains': (330, 420, 850, 930), 'fields': (400, 460, 140, 210),
-        'rocky': (90, 160, 520, 580)}
+        'rocky': (90, 160, 520, 580), 'sparse': (130, 200, 860, 930)}
 
 for roi in rois:
     fns = p0 / f'{stackname}_{roi}.npy'
