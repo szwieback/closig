@@ -38,7 +38,7 @@ def load_corners(rois, stack='Colorado'):
         corners_trans[roi] = ct
     return corners_trans
 
-def plot_NM(p0, fnls):
+def plot_NM(p0, fnls, fnout=None):
     from string import ascii_lowercase
     from matplotlib.patches import Rectangle
     from matplotlib.cm import ScalarMappable
@@ -47,7 +47,7 @@ def plot_NM(p0, fnls):
 
     metrics = load_object(p0 / 'processed' / 'metrics' / f'{roi}.p')
     extract_trend = lambda jdp: (
-        metrics[0]['trend'][jdp][..., 0], np.linalg.norm(metrics[0]['trend'][jdp][..., 1:], axis=-1))
+        metrics[0]['trend'][jdp][..., 1], np.linalg.norm(metrics[0]['trend'][jdp][..., 2:], axis=-1))
     trend, amplitude = extract_trend(0)
     trend_s, amplitude_s = extract_trend(1)  # baseline up to 1/2 year.
     cmetrics = load_object(p0 / 'processed' / 'cmetrics' / f'{roi}.p')
@@ -61,17 +61,17 @@ def plot_NM(p0, fnls):
     cmaps = [cmap_div.reversed(), cmap_div, cmap_div, cmap_div.reversed(), cmap_mag, cmap_mag]
     cbarticks = [
         (-np.pi / 4, 0, np.pi / 4), (-np.pi / 4, 0, np.pi / 4), (-np.pi / 12, 0, np.pi / 12), 
-        (-np.pi / 32, 0, np.pi / 32), (0, np.pi/8), (1, 5)]
+        (-np.pi / 24, 0, np.pi / 24), (0, np.pi/8), (1, 5)]
     cbarticklabels = [
         ('-$\\pi/4$', '', '$\\pi/4$'), ('-$\\pi/4$', '', '$\\pi/4$'), ('-$\\pi/12$', '', '$\\pi/12$'), 
-        ('-$\\pi/32$', '', '$\\pi/32$'), ('0', '$\\pi/8$'), (1, 5)]
-    cbarsecticks = [(-3, 0, 3), (-3, 0, 3), (-1, 0, 1), (-0.3, 0, 0.3), (0.0, 3), None]
-    cbarsecticklabels = [(-3, '', 3), (-3, '', 3), None, (-0.3, '', 0.3), None, None]
+        ('-$\\pi/24$', '', '$\\pi/24$'), ('0', '$\\pi/8$'), (1, 5)]
+    cbarsecticks = [(-3, 0, 3), (-3, 0, 3), (-1, 0, 1), (-0.5, 0, 0.5), (0.0, 1.0), None]
+    cbarsecticklabels = [(-3, '', 3), (-3, '', 3), (-1, '', 1), (-0.5, '', 0.5), None, None]
     cbarunits = ['rad', 'rad/yr', 'rad/yr', 'rad', 'rad', '$-$']
     cbarsecunits = ['mm', 'mm/yr', 'mm/yr', 'mm', 'mm', None]
     norms = [
         Nm(-np.pi / 3, np.pi / 3), Nm(-np.pi / 3, np.pi / 3), Nm(-np.pi / 12, np.pi / 12), 
-        Nm(-np.pi / 32, np.pi / 32), Nm(0.0, np.pi/8), Nm(0.5, 10)]
+        Nm(-np.pi / 20, np.pi / 20), Nm(0.0, np.pi/8), Nm(0.5, 10)]
     lamb = 55.0  # mm
     conv = (lambda phi: phi * lamb / (4 * np.pi), lambda d: 4 * np.pi * d / lamb)
 
@@ -127,17 +127,19 @@ def plot_NM(p0, fnls):
     ax = axs[-1]
     from matplotlib.lines import Line2D
     line = Line2D(
-        (0.58, 0.80), (-0.07,) * 2, lw=0.8, color='#666666', transform=ax.transAxes)
+        (0.56, 0.78), (-0.07,) * 2, lw=0.8, color='#666666', transform=ax.transAxes)
     line.set_clip_on(False)
     ax.add_line(line)
     ax.text(0.69, -0.16, '10 km', ha='center', va='baseline', transform=ax.transAxes)
-    plt.show()
+    if fnout is None:
+        plt.show()
+    else:
+        fig.savefig(fnout, dpi=450)
 
-# add unit labels
 
 if __name__ == '__main__':
     p0 = Path('/home/simon/Work/closig/')
     fnls = p0 / 'optical/NewMexico/combined_resampled.npy'
-
-    plot_NM(p0, fnls)
+    fnout = p0 / 'figures' / 'NewMexico.pdf'
+    plot_NM(p0, fnls, fnout=fnout)
 

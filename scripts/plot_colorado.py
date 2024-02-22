@@ -38,7 +38,7 @@ def load_corners(rois, stack='Colorado'):
         corners_trans[roi] = ct
     return corners_trans
 
-def plot_Colorado(p0, fnls):
+def plot_Colorado(p0, fnls, fnout=None):
     from string import ascii_lowercase
     from matplotlib.patches import Rectangle
     from matplotlib.cm import ScalarMappable
@@ -47,7 +47,7 @@ def plot_Colorado(p0, fnls):
 
     metrics = load_object(p0 / 'processed' / 'metrics' / f'{roi}.p')
     extract_trend = lambda jdp: (
-        metrics[0]['trend'][jdp][..., 0], np.linalg.norm(metrics[0]['trend'][jdp][..., 1:], axis=-1))
+        metrics[0]['trend'][jdp][..., 1], np.linalg.norm(metrics[0]['trend'][jdp][..., 2:], axis=-1))
     trend, amplitude = extract_trend(0)
     trend_s, amplitude_s = extract_trend(1)  # baseline up to 1/2 year.
     cmetrics = load_object(p0 / 'processed' / 'cmetrics' / f'{roi}.p')
@@ -61,29 +61,32 @@ def plot_Colorado(p0, fnls):
     cmaps = [cmap_div.reversed(), cmap_div, cmap_div, cmap_div.reversed(), cmap_mag, cmap_mag]
     cbarticks = [
         (-np.pi / 4, 0, np.pi / 4), (-np.pi / 4, 0, np.pi / 4), (-np.pi / 12, 0, np.pi / 12), 
-        (-np.pi / 32, 0, np.pi / 32), (0, np.pi/6), (1, 5)]
+        (-np.pi / 24, 0, np.pi / 24), (0, np.pi/6), (1, 5)]
     cbarticklabels = [
         ('-$\\pi/4$', '', '$\\pi/4$'), ('-$\\pi/4$', '', '$\\pi/4$'), ('-$\\pi/12$', '', '$\\pi/12$'), 
-        ('-$\\pi/32$', '', '$\\pi/32$'), ('0', '$\\pi/6$'), (1, 5)]
-    cbarsecticks = [(-3, 0, 3), (-3, 0, 3), (-1, 0, 1), (-0.3, 0, 0.3), (0.0, 2.0), None]
-    cbarsecticklabels = [None, (-3, '', 3), None, (-0.3, '', 0.3), None, None]
+        ('-$\\pi/24$', '', '$\\pi/24$'), ('0', '$\\pi/6$'), (1, 5)]
+    cbarsecticks = [(-3, 0, 3), (-3, 0, 3), (-1, 0, 1), (-0.5, 0, 0.5), (0.0, 2.0), None]
+    cbarsecticklabels = [(-3, '', 3), (-3, '', 3), (-1, '', 1), (-0.5, '', 0.5), None, None]
     cbarunits = ['rad', 'rad/yr', 'rad/yr', 'rad', 'rad', '$-$']
     cbarsecunits = ['mm', 'mm/yr', 'mm/yr', 'mm', 'mm', None]
     norms = [
         Nm(-np.pi / 4, np.pi / 4), Nm(-np.pi / 3, np.pi / 3), Nm(-np.pi / 12, np.pi / 12), 
         Nm(-np.pi / 32, np.pi / 32), Nm(0.0, np.pi/6), Nm(0.5, 5)]
+    norms = [
+        Nm(-np.pi / 4, np.pi / 4), Nm(-np.pi / 3, np.pi / 3), Nm(-np.pi / 10, np.pi / 10), 
+        Nm(-np.pi / 20, np.pi / 20), Nm(0.0, np.pi/6), Nm(0.5, 5)]  
     lamb = 55.0  # mm
     conv = (lambda phi: phi * lamb / (4 * np.pi), lambda d: 4 * np.pi * d / lamb)
 
     labels = ['$\\bar{\\Xi}_{\\mathrm{ss}}(1\\,\\mathrm{yr})$', '$\\Delta \\beta$ nearest',
               '$\\Delta \\beta$ $1/2$ yr', '$\\bar{\\Xi}_{\\mathrm{th}}(1\\,\\mathrm{yr})$',
               '$\\alpha$ $1/2$ yr', '$p_r(1\\,\\mathrm{yr})$', 'Landsat']
-
-    axs[0].imshow(prep(np.angle(cmetrics['mean_year'])), cmap=cmaps[0], norm=norms[0])
-    axs[1].imshow(prep(trend), cmap=cmaps[1], norm=norms[1])
-    axs[2].imshow(prep(trend_s), cmap=cmaps[2], norm=norms[2])
+    ipl = 'gaussian'
+    axs[0].imshow(prep(np.angle(cmetrics['mean_year'])), cmap=cmaps[0], norm=norms[0], interpolation=ipl)
+    axs[1].imshow(prep(trend), cmap=cmaps[1], norm=norms[1], interpolation=ipl)
+    axs[2].imshow(prep(trend_s), cmap=cmaps[2], norm=norms[2], interpolation=ipl)
     axs[3].imshow(
-        prep(np.angle(cmetrics['mean_year_th'])), cmap=cmaps[3], norm=norms[3])
+        prep(np.angle(cmetrics['mean_year_th'])), cmap=cmaps[3], norm=norms[3], interpolation=ipl)
     axs[4].imshow(prep(amplitude_s), cmap=cmaps[4], norm=norms[4])
     axs[5].imshow(prep(p_enh), cmap=cmaps[5], norm=norms[5])
     axs[6].imshow(imls)
@@ -131,13 +134,16 @@ def plot_Colorado(p0, fnls):
     line.set_clip_on(False)
     ax.add_line(line)
     ax.text(0.69, -0.16, '10 km', ha='center', va='baseline', transform=ax.transAxes)
-    plt.show()
-
+    if fnout is None:
+        plt.show()
+    else:
+        fig.savefig(fnout, dpi=300)
 # add unit labels
 
 if __name__ == '__main__':
     p0 = Path('/home/simon/Work/closig/')
     fnls = p0 / 'optical/Colorado/LC08_L2SP_034032_20200702_20200913_02_T1_resampled.npy'
+    fnout = p0 / 'figures' / 'Colorado.pdf'
 
-    plot_Colorado(p0, fnls)
+    plot_Colorado(p0, fnls, fnout=fnout)
 

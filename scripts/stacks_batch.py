@@ -31,7 +31,7 @@ def evaluate_basis(fn, Basis):
     cclosures = basis.evaluate_covariance(C_vec, normalize=True, compl=True, vectorized=True)
     return (basis, cclosures) 
 
-def stack_batch(fn, pout, metrics, Bases, cmetrics, N_jobs=48, overwrite=False):
+def stack_batch(fn, pout, metrics, Bases, cmetrics, N_jobs=36, overwrite=False):
     fnout = (pout / 'phasehistory' / fn.stem).with_suffix('.p')
     if overwrite or not fnout.exists():
         ex = CutOffDataExperiment.from_file(fn, dps=meta['dps'], add_full=meta['add_full'])

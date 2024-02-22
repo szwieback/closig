@@ -51,7 +51,7 @@ def phase_error_plot(
 
 def phase_history_bias_plot(
         ex, ax=None, show_xlabel=True, show_ylabel=True, y_xlab=None, x_ylab=None, cols=None, 
-        show_xticklabels=True, alpha=None, flip_sign=True):
+        show_xticklabels=True, alpha=None):
     if cols is None: cols = [c for c in colslist]
     if ax is None:
         _, ax = prepare_figure()
