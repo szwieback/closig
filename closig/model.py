@@ -530,13 +530,6 @@ class PrecipScattSoilLayer(ScattSoilLayer):
         assert p < self.max_P, f"p must be less than {self.max_P}"
         return self.n[p]
 
-    def plot_n(self, P):
-        import matplotlib.pyplot as plt
-        assert P < self.max_P, f"P must be less than {self.max_P}"
-        plt.plot(self.n.real[:P], '-', label='real', color='black')
-        plt.plot(-1 * self.n.imag[:P], '--', label='-1 * imag', color='black')
-        plt.legend(loc='best')
-        plt.show()
 
 class SeasonalVegLayer(ScattLayer):
     '''

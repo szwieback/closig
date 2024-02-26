@@ -36,11 +36,11 @@ def plot_stack_comparison(rois, headers=None, fnout=None):
     triangleparms = [
         (180, cmap_cyclic, ['$-\\pi$', '0', '$\\pi$']),
         (45, cmap_clipped, ['$-\\pi/4$', '0', '$\\pi/4$'])]
-    cax_limits = [1.28, 0.1, 0.10, 0.80]
+    cax_limits = [1.36, 0.1, 0.10, 0.80]
     dps_labels = ['nearest', '1/2 yr', '1 yr']
     fig, axs = prepare_figure(
-        nrows=4, ncols=len(rois), figsize=(1.90, 1.05), sharey='row', sharex='col', top=0.96, left=0.06,
-        wspace=0.20, hspace=0.18, bottom=0.10, right=0.89)
+        nrows=4, ncols=len(rois), figsize=(1.80, 1.05), sharey='row', sharex='col', top=0.96, left=0.07,
+        wspace=0.16, hspace=0.18, bottom=0.10, right=0.85)
 
     for ax in axs[len(triangleparms):,:].flatten():
         ax.set_box_aspect(aspect)
@@ -107,7 +107,7 @@ def plot_stack_comparison(rois, headers=None, fnout=None):
         ax.text(1.24, 0.50, lab, rotation=270, ha='left', va='center', transform=ax.transAxes)
     ylabels = [
         ('small step', '$\\tau$ [yr]'), ('two hop', '$\\tau$ [yr]'),
-        ('$\\phi$ bias', '[rad]'), ('$\\phi$ bias', '[rad]')]
+        ('$\\Delta \\theta$', '[rad]'), ('$\\Delta \\theta$', '[rad]')]
     for jax, ax in enumerate(axs[:, 0]):
         ylabell, ylabelr = ylabels[jax]
         ax.text(-0.41, 0.50, ylabell, ha='right', va='center', transform=ax.transAxes, rotation=90)
@@ -121,9 +121,9 @@ if __name__ == '__main__':
     p0 = Path('/home/simon/Work/closig/')
     fnout = p0 / 'figures' / 'triangle_stacks.pdf'
 
-    rois = ['Colorado_grass', 'Colorado_mountains', 'NewMexico_shrubs', 'NewMexico_dissected']
+    rois = ['Colorado_grass', 'Colorado_mountains', 'NewMexico_scrub', 'NewMexico_dissected']
     # 'NewMexico_eroded' has seasonal variability in ph
-    headers = ['grassland CO', 'mountainous CO', 'shrubs NM', 'dissected NM']
+    headers = ['grassland CO', 'mountainous CO', 'scrub NM', 'desert NM']
     
     plot_stack_comparison(rois, headers=headers, fnout=fnout)
 

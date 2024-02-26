@@ -141,9 +141,6 @@ class SmallStepBasis(Basis):
     def _covector(pb, pe):
         return [(p, p + 1, 1) for p in range(pb, pe)] + [(pb, pe, -1)]
 
-# class for two hop
-# loop over t, tau
-
 
 class TwoHopBasis(Basis):
     def __init__(self, P):

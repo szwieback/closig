@@ -51,11 +51,11 @@ class TrendSeasonalMetric(PhaseHistoryMetric):
         self.P_year = P_year
 
     def predictor_matrix(self, P):
-        X = np.zeros((3, P))
-        t_y = np.arange(P) / self.P_year
-        X[0,:] = t_y
-        X[1,:] = np.cos(2 * np.pi * t_y)
-        X[2,:] = np.sin(2 * np.pi * t_y)
+        X = np.ones((4, P))
+        t_y = (np.arange(P) - P / 2) / self.P_year
+        X[1,:] = t_y
+        X[2,:] = np.cos(2 * np.pi * t_y)
+        X[3,:] = np.sin(2 * np.pi * t_y)
         return X
 
     def evaluate(self, ph1, ph2):
@@ -89,41 +89,41 @@ class PeriodogramMetric(PhaseHistoryMetric):
         return f, p
 
 class ClosureMetric():
-    
+
     @abstractmethod
     def __init__(self,):
         pass
-    
+
     @staticmethod
     def _tau_ind(basis, tau, tolerance=0.5):
         ind = (np.abs(np.array(basis.ptau) - tau) < tolerance)
         return ind
-        
+
     @abstractmethod
     def evaluate(self, basis, cclosures, **kwargs):
         pass
 
 class MeanClosureMetric(ClosureMetric):
-    
+
     def __init__(self, tau, tolerance=0.5):
         self.tau = tau
         self.tolerance = tolerance
-        
+
     def evaluate(self, basis, cclosures, **kwargs):
         ind = self._tau_ind(basis, self.tau, self.tolerance)
         m = np.mean(cclosures[ind, ...], axis=0)
         if 'return_real' in kwargs and kwargs['return_real']:
             m = np.angle(m)
         return m
-    
+
 class PSDClosureMetric(ClosureMetric):
-    
+
     def __init__(self, tau, P_year, tolerance=0.5, f_tolerance=0.1):
         self.tau = tau
         self.P_year = P_year
         self.tolerance = tolerance
-        self.f_tolerance=f_tolerance
-        
+        self.f_tolerance = f_tolerance
+
     def _periodogram(self, basis, cclosures, **kwargs):
         from scipy.signal import periodogram
         from scipy.fft import fftshift
@@ -136,11 +136,10 @@ class PSDClosureMetric(ClosureMetric):
         f, p = periodogram(cclind, axis=0, nfft=basis.P, fs=self.P_year, return_onesided=False)
         p[:, mask] = np.nan
         f, p = fftshift(f), fftshift(p, axes=0)
-        return f, p        
-        
+        return f, p
+
     def evaluate(self, basis, cclosures, **kwargs):
         f, p = self._periodogram(basis, cclosures, **kwargs)
         ind_f = np.logical_or((np.abs(f - 1) < self.f_tolerance), (np.abs(f + 1) < self.f_tolerance))
         p_enh = np.mean(p[ind_f, ...], axis=0) / np.mean(p, axis=0)
         return p_enh
-        

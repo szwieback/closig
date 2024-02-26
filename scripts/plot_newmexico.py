@@ -56,8 +56,8 @@ def plot_NM(p0, fnls, fnout=None):
     imls = contrast(np.load(fnls))
 
     fig, axs = prepare_figure(
-        ncols=6, figsize=(2.00, 0.73), sharex=True, sharey=True, remove_spines=False, left=0.01, right=0.99,
-        wspace=0.10, top=0.94, bottom=0.20)
+        ncols=6, figsize=(2.00, 0.74), sharex=True, sharey=True, remove_spines=False, left=0.01, right=0.99,
+        wspace=0.10, top=0.93, bottom=0.20)
     cmaps = [cmap_div.reversed(), cmap_div, cmap_div, cmap_div.reversed(), cmap_mag, cmap_mag]
     cbarticks = [
         (-np.pi / 4, 0, np.pi / 4), (-np.pi / 4, 0, np.pi / 4), (-np.pi / 12, 0, np.pi / 12), 
@@ -75,9 +75,9 @@ def plot_NM(p0, fnls, fnout=None):
     lamb = 55.0  # mm
     conv = (lambda phi: phi * lamb / (4 * np.pi), lambda d: 4 * np.pi * d / lamb)
 
-    labels = ['$\\bar{\\Xi}_{\\mathrm{ss}}(1\\,\\mathrm{yr})$', '$\\Delta \\beta$ nearest',
-              '$\\Delta \\beta$ $1/2$ yr', '$\\bar{\\Xi}_{\\mathrm{th}}(1\\,\\mathrm{yr})$',
-              '$\\alpha$ nearest', '$p_r(1\\,\\mathrm{yr})$', 'Landsat']
+    labels = ['$\\bar{\\Xi}^{\\mathrm{s}}(1\\,\\mathrm{yr})$', '$\\beta_{\\mathrm{n}}$',
+              '$\\beta_{1/2\\,\\mathrm{yr}}$', '$\\bar{\\Xi}^{\\mathrm{h}}(1\\,\\mathrm{yr})$',
+              '$\\alpha_{1/2\\,\\mathrm{yr}}$', 'Landsat']
 
     axs[0].imshow(prep(np.angle(cmetrics['mean_year'])), cmap=cmaps[0], norm=norms[0])
     axs[1].imshow(prep(trend), cmap=cmaps[1], norm=norms[1])
@@ -90,15 +90,15 @@ def plot_NM(p0, fnls, fnout=None):
 
     from scripts.newmexico import rois
     corners = load_corners(rois, stack=roi)
-    ax = axs[5]
-    for isn in ('shrubs', 'dissected'):
-        extent = corners[isn]
-        corner = (extent[0][1], extent[0][0])
-        w, h = extent[1][1] - extent[0][1], extent[1][0] - extent[0][0]
-        ax.add_patch(
-            Rectangle(corner, w, h, fill=True, ec='w', lw=1, fc='none', zorder=6))
-        ax.text(corner[0] - 15, corner[1] + h / 2, isn[0], ha='right', va='center', c='w',
-                bbox={'fc': '#333333', 'ec': 'none', 'alpha': 0.5, 'pad': 0.0})
+    for ax in axs[5:]:
+        for isn in ('dissected', 'scrub'):
+            extent = corners[isn]
+            corner = (extent[0][1], extent[0][0])
+            w, h = extent[1][1] - extent[0][1], extent[1][0] - extent[0][0]
+            ax.add_patch(
+                Rectangle(corner, w, h, fill=True, ec='w', lw=1, fc='none', zorder=6))
+            ax.text(corner[0] - 15, corner[1] + h / 2, isn[0], ha='right', va='center', c='w',
+                    bbox={'fc': '#333333', 'ec': 'none', 'alpha': 0.5, 'pad': 0.0})
 
     for jax, ax in enumerate(axs[:-1]):
         cax = ax.inset_axes([0.10, -0.16, 0.50, 0.05], transform=ax.transAxes)
@@ -122,7 +122,7 @@ def plot_NM(p0, fnls, fnout=None):
         ax.set_xticks([])
         ax.set_yticks([])
         lab = ascii_lowercase[jax] + ') ' + labels[jax]
-        ax.text(0.00, 1.02, lab, ha='left', va='baseline', transform=ax.transAxes,)
+        ax.text(0.00, 1.03, lab, ha='left', va='baseline', transform=ax.transAxes,)
     # scale
     ax = axs[-1]
     from matplotlib.lines import Line2D

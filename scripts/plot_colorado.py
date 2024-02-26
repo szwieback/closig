@@ -56,8 +56,8 @@ def plot_Colorado(p0, fnls, fnout=None):
     imls = contrast(np.load(fnls))
 
     fig, axs = prepare_figure(
-        ncols=7, figsize=(2.05, 0.73), sharex=True, sharey=True, remove_spines=False, left=0.01, right=0.99,
-        wspace=0.10, top=0.94, bottom=0.20)
+        ncols=7, figsize=(2.05, 0.74), sharex=True, sharey=True, remove_spines=False, left=0.01, right=0.99,
+        wspace=0.10, top=0.93, bottom=0.20)
     cmaps = [cmap_div.reversed(), cmap_div, cmap_div, cmap_div.reversed(), cmap_mag, cmap_mag]
     cbarticks = [
         (-np.pi / 4, 0, np.pi / 4), (-np.pi / 4, 0, np.pi / 4), (-np.pi / 12, 0, np.pi / 12), 
@@ -78,9 +78,9 @@ def plot_Colorado(p0, fnls, fnout=None):
     lamb = 55.0  # mm
     conv = (lambda phi: phi * lamb / (4 * np.pi), lambda d: 4 * np.pi * d / lamb)
 
-    labels = ['$\\bar{\\Xi}_{\\mathrm{ss}}(1\\,\\mathrm{yr})$', '$\\Delta \\beta$ nearest',
-              '$\\Delta \\beta$ $1/2$ yr', '$\\bar{\\Xi}_{\\mathrm{th}}(1\\,\\mathrm{yr})$',
-              '$\\alpha$ $1/2$ yr', '$p_r(1\\,\\mathrm{yr})$', 'Landsat']
+    labels = ['$\\bar{\\Xi}^{\\mathrm{s}}(1\\,\\mathrm{yr})$', '$\\beta_{\\mathrm{n}}$',
+              '$\\beta_{1/2\\,\\mathrm{yr}}$', '$\\bar{\\Xi}^{\\mathrm{h}}(1\\,\\mathrm{yr})$',
+              '$\\alpha_{1/2\\,\\mathrm{yr}}$', '$p_r(1\\,\\mathrm{yr})$', 'Landsat']
     ipl = 'gaussian'
     axs[0].imshow(prep(np.angle(cmetrics['mean_year'])), cmap=cmaps[0], norm=norms[0], interpolation=ipl)
     axs[1].imshow(prep(trend), cmap=cmaps[1], norm=norms[1], interpolation=ipl)
@@ -125,7 +125,7 @@ def plot_Colorado(p0, fnls, fnout=None):
         ax.set_xticks([])
         ax.set_yticks([])
         lab = ascii_lowercase[jax] + ') ' + labels[jax]
-        ax.text(0.00, 1.02, lab, ha='left', va='baseline', transform=ax.transAxes,)
+        ax.text(0.00, 1.03, lab, ha='left', va='baseline', transform=ax.transAxes,)
     # scale
     ax = axs[-1]
     from matplotlib.lines import Line2D
@@ -137,7 +137,7 @@ def plot_Colorado(p0, fnls, fnout=None):
     if fnout is None:
         plt.show()
     else:
-        fig.savefig(fnout, dpi=300)
+        fig.savefig(fnout, dpi=450)
 # add unit labels
 
 if __name__ == '__main__':
