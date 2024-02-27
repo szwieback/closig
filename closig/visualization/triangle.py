@@ -45,10 +45,11 @@ def triangle_plot(
             ax.set_xticklabels(ticklabels)
         if show_yticklabels:
             ax.set_yticklabels(ticklabels)
-    if not show_xticklabels:
-        ax.set_xticklabels([])
-    if not show_yticklabels:
-        ax.set_yticklabels([])
+    else:
+        if not show_xticklabels:
+            ax.set_xticklabels([])
+        if not show_yticklabels:
+            ax.set_yticklabels([])
 
     from matplotlib.colors import Normalize
     if cclosures_ref is None:
