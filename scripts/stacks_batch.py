@@ -87,8 +87,7 @@ if __name__ == '__main__':
 
     fns = list((p0 / 'stacks').glob('*.npy'))
 
-    for fn in fns:
-        if 'NewMexico_scrub' in str(fn):
-            stack_batch(fn, p0 / 'processed/', metrics, Bases, cmetrics, overwrite=True)
+    for fn in fns:    
+        stack_batch(fn, p0 / 'processed/', metrics, Bases, cmetrics, overwrite=False)
 
         

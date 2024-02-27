@@ -78,7 +78,7 @@ def plot_stack_comparison(rois, headers=None, fnout=None):
     for ax in axs[0:2, 0]:
         ax.set_yticks([0, 1, 2, 3])
     # axs[2, 0].set_ylim(-1.86, 1.86)
-    axs[2, 0].set_ylim(-np.pi, np.pi)
+    axs[2, 0].set_ylim(-np.pi/2, np.pi/2)
     axs[3, 0].set_ylim(-np.pi / 8, np.pi / 8)
     for jax, ax in enumerate(axs[0:len(triangleparms), -1]):
         cax = ax.inset_axes(cax_limits)
@@ -88,22 +88,22 @@ def plot_stack_comparison(rois, headers=None, fnout=None):
             shrink=0.5, orientation='vertical', ticks=[-vabs, 0, vabs])
         cbar.set_ticklabels(triangleparms[jax][2])
     ax = axs[-2, -1]
-    ax.set_yticks((-np.pi, 0, np.pi))
-    ax.set_yticklabels(('$-\\pi$', '0', '$\\pi$'))
+    ax.set_yticks((-np.pi/2, 0, np.pi/2))
+    ax.set_yticklabels(('$-\\pi/2$', '0', '$\\pi/2$'))
     handles = [mlines.Line2D([], [], color=c, label=l, lw=0.8) for l, c in zip(dps_labels, colslist)]
     ax.legend(
         handles=handles, bbox_to_anchor=(cax_limits[0], -0.11), loc='center left', borderaxespad=0.0,
         frameon=False, borderpad=0.3, handlelength=1.0, handletextpad=0.6)
     secax = ax.secondary_yaxis('right', functions=conv)
-    secax.set_yticks((-1e-2, 0, 1e-2))
-    secax.set_yticklabels((-1, 0, 1))
+    secax.set_yticks((-5e-3, 0, 5e-3))
+    secax.set_yticklabels((-5, 0, 5))
     ax = axs[-1, -1]
     ax.set_yticks((-np.pi / 8, 0, np.pi / 8))
     ax.set_yticklabels(('$-\\frac{\\pi}{8}$', '0', '$\\frac{\\pi}{8}$'))
     secax2 = ax.secondary_yaxis('right', functions=conv)
     secax2.set_yticks((-1e-3, 0, 1e-3))
     secax2.set_yticklabels((-1, 0, 1))
-    for lab, ax in zip(['[cm]', '[mm]'], axs[-2:, -1]):
+    for lab, ax in zip(['[mm]', '[mm]'], axs[-2:, -1]):
         ax.text(1.24, 0.50, lab, rotation=270, ha='left', va='center', transform=ax.transAxes)
     ylabels = [
         ('small step', '$\\tau$ [yr]'), ('two hop', '$\\tau$ [yr]'),
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     p0 = Path('/home/simon/Work/closig/')
     fnout = p0 / 'figures' / 'triangle_stacks.pdf'
 
-    rois = ['Colorado_grass', 'Colorado_mountains', 'NewMexico_scrub', 'NewMexico_dissected']
+    rois = ['Colorado_grass', 'Colorado_mountains', 'NewMexico_scrub', 'NewMexico_desert']
     # 'NewMexico_eroded' has seasonal variability in ph
     headers = ['grassland CO', 'mountainous CO', 'scrub NM', 'desert NM']
     

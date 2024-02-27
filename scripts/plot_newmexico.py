@@ -91,7 +91,7 @@ def plot_NM(p0, fnls, fnout=None):
     from scripts.newmexico import rois
     corners = load_corners(rois, stack=roi)
     for ax in axs[5:]:
-        for isn in ('dissected', 'scrub'):
+        for isn in ('scrub', 'desert'):
             extent = corners[isn]
             corner = (extent[0][1], extent[0][0])
             w, h = extent[1][1] - extent[0][1], extent[1][0] - extent[0][0]

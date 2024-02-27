@@ -18,7 +18,7 @@ arcs = np.array([(n0, n1) for n0 in range(N) for n1 in range(n0, N)])
 
 rois = {'dissected': (300, 370, 850, 910), 'flat': (70, 130, 490, 560), 'mountain': (170, 230, 750, 820),
         'eroded': (110, 170, 870, 920), 'shrubs': (300, 370, 750, 810), 'barren': (5, 65, 140, 215), 
-        'scrub': (135, 170, 320, 420)}
+        'scrub': (135, 170, 320, 420), 'desert': (255, 305, 90, 155)}
 
 for roi in rois:
     fns = p0 / f'{stackname}_{roi}.npy'
