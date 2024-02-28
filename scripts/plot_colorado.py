@@ -43,6 +43,7 @@ def plot_Colorado(p0, fnls, fnout=None):
     from matplotlib.patches import Rectangle
     from matplotlib.cm import ScalarMappable
     from matplotlib.colors import Normalize as Nm
+    import matplotlib.patheffects as pe
     roi = 'Colorado'
 
     metrics = load_object(p0 / 'processed' / 'metrics' / f'{roi}.p')
@@ -101,7 +102,7 @@ def plot_Colorado(p0, fnls, fnout=None):
         ax.add_patch(
             Rectangle(corner, w, h, fill=True, ec='w', lw=1, fc='none', zorder=6))
         ax.text(corner[0] - 15, corner[1] + h / 2, isn[0], ha='right', va='center', c='w',
-                bbox={'fc': '#333333', 'ec': 'none', 'alpha': 0.5, 'pad': 0.0})
+                path_effects=[pe.withStroke(linewidth=1, foreground='#666666')])
 
     for jax, ax in enumerate(axs[:-1]):
         cax = ax.inset_axes([0.10, -0.16, 0.50, 0.05], transform=ax.transAxes)

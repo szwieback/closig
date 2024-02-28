@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from closig import load_object
 from closig.experiments import MeanClosureMetric, PSDClosureMetric
 from closig.experiments.metrics import MeanClosureMetric
-from closig.visualization import prepare_figure, cmap_div, cmap_mag
+from closig.visualization import prepare_figure, cmap_div, cmap_mag, colslist
 
 def prep(im):
     im2 = im[10:-10, 40:-40, ...]
@@ -43,6 +43,7 @@ def plot_NM(p0, fnls, fnout=None):
     from matplotlib.patches import Rectangle
     from matplotlib.cm import ScalarMappable
     from matplotlib.colors import Normalize as Nm
+    import matplotlib.patheffects as pe
     roi = 'NewMexico'
 
     metrics = load_object(p0 / 'processed' / 'metrics' / f'{roi}.p')
@@ -90,15 +91,16 @@ def plot_NM(p0, fnls, fnout=None):
 
     from scripts.newmexico import rois
     corners = load_corners(rois, stack=roi)
+    c = 'w'
     for ax in axs[5:]:
         for isn in ('scrub', 'desert'):
             extent = corners[isn]
             corner = (extent[0][1], extent[0][0])
             w, h = extent[1][1] - extent[0][1], extent[1][0] - extent[0][0]
             ax.add_patch(
-                Rectangle(corner, w, h, fill=True, ec='w', lw=1, fc='none', zorder=6))
-            ax.text(corner[0] - 15, corner[1] + h / 2, isn[0], ha='right', va='center', c='w',
-                    bbox={'fc': '#333333', 'ec': 'none', 'alpha': 0.5, 'pad': 0.0})
+                Rectangle(corner, w, h, fill=True, ec=c, lw=1, fc='none', zorder=6))
+            ax.text(corner[0] - 15, corner[1] + h / 2, isn[0], ha='right', va='center', c=c,
+                    path_effects=[pe.withStroke(linewidth=1, foreground='#666666')])
 
     for jax, ax in enumerate(axs[:-1]):
         cax = ax.inset_axes([0.10, -0.16, 0.50, 0.05], transform=ax.transAxes)
