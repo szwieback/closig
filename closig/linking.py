@@ -5,7 +5,6 @@ Created on Jan 20, 2023
 
 '''
 from abc import abstractmethod
-import closig.graphs as graphs
 import numpy as np
 
 def restrict_kwargs(fun, kwargs):
@@ -13,37 +12,6 @@ def restrict_kwargs(fun, kwargs):
     ) if k in fun.__code__.co_varnames}
     return rkwargs
 
-class Subsetter():
-    '''
-        Subset a modeled covariance matrix given a maximum temporal baseline, or random sampling based
-        on a graph representation of the InSAR network. This simulates an SBAS scenario where temporal baseline dependent velocity errors may arrise.
-
-        This is a binary and stack-wise operation, thus it is distinct from the regularizer.
-
-        Not working yet, but the idea is to genrate random adjaceny matrices to test whether redunancy
-        is key driver of velocity biases.
-    '''
-
-    def __init__(self, P, max_tau=5):
-        self.P = P
-        self.max_tau = max_tau
-
-    def subset_random(self, G, seed=None):
-        '''
-            Subset network based on a random graph/adjacency matrix
-            returns instance of self
-        '''
-        k = np.random.uniform(high=1, low=0.5, size=1, seed=seed)
-        l = np.random.uniform(high=self.P - 2, low=1, size=1, seed=seed)
-        G, A = graphs.get_rand_graph(self.P, k=k, l=l)
-        self.G = G
-        return self
-
-    def G(self):
-        return self.G
-
-    def get_cycle_rank(self):
-        return graphs.cycle_rank(self.G)
 
 class Regularizer():
     @abstractmethod

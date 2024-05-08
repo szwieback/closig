@@ -7,30 +7,6 @@ import numpy as np
 from abc import abstractmethod
 from cmath import exp
 
-def coherence_model(p0, p1, dcoh, coh0=0.0):
-    if p0 == p1:
-        coh = 1.0
-    else:
-        coh = coh0 + (1 - coh0) * dcoh ** (abs(p0 - p1))
-    return coh
-
-def soil_moisture_precip(
-        interval, tau, unit_filter_length=20, P0=5, P_year=30, P=1024, porosity=0.35, residual=0.02, 
-        seasonality=0.0):
-    '''
-        Generate a normalized soil moisture timeseries fed by uniformly spaced precipitation pulses
-    '''
-    impulses = np.zeros(P)
-    precip_eff = porosity * ((1 - seasonality) + seasonality * np.cos(2*np.pi*np.arange(P)/P_year))
-    impulses[P0::interval] = precip_eff[P0::interval]
-    # Exponential decay
-    filter_length = int(unit_filter_length / tau)
-    kernel = np.exp(-1 * np.arange(0, filter_length) * tau)
-    sm = np.convolve(impulses, kernel)
-    sm[sm > porosity] = porosity
-    sm[sm < residual] = residual
-    return sm
-
 class DielectricModel():
     @abstractmethod
     def __init__(self):
@@ -573,6 +549,30 @@ class SeasonalVegLayer(ScattLayer):
     @property
     def class_name(self):
         return 'seasonal vegetation layer'
+
+def coherence_model(p0, p1, dcoh, coh0=0.0):
+    if p0 == p1:
+        coh = 1.0
+    else:
+        coh = coh0 + (1 - coh0) * dcoh ** (abs(p0 - p1))
+    return coh
+
+def soil_moisture_precip(
+        interval, tau, unit_filter_length=20, P0=5, P_year=30, P=1024, porosity=0.35, residual=0.02, 
+        seasonality=0.0):
+    '''
+        Generate a normalized soil moisture timeseries fed by uniformly spaced precipitation pulses
+    '''
+    impulses = np.zeros(P)
+    precip_eff = porosity * ((1 - seasonality) + seasonality * np.cos(2*np.pi*np.arange(P)/P_year))
+    impulses[P0::interval] = precip_eff[P0::interval]
+    # Exponential decay
+    filter_length = int(unit_filter_length / tau)
+    kernel = np.exp(-1 * np.arange(0, filter_length) * tau)
+    sm = np.convolve(impulses, kernel)
+    sm[sm > porosity] = porosity
+    sm[sm < residual] = residual
+    return sm
 
 if __name__ == '__main__':
     pass

@@ -1,5 +1,4 @@
 import numpy as np
-import colorcet as cc
 import matplotlib.pyplot as plt
 
 def real_closures(cclosures):

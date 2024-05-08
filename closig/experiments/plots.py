@@ -6,7 +6,7 @@ Created on Nov 6, 2023
 import numpy as np
 import numpy.ma as ma
 
-from closig.visualization import prepare_figure, initialize_matplotlib, colslist, triangle_plot
+from closig.visualization import prepare_figure, colslist, triangle_plot
 from closig.experiments import CosMetric 
 
 y_xlab_def = -0.40
