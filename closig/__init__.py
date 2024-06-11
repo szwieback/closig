@@ -1,4 +1,4 @@
-from closig.expansion import TwoHopBasis, SmallStepBasis
+from closig.expansion import TwoHopBasis, SmallStepBasis, clip_cclosures
 from closig.model import (
     Geom, CovModel, LayeredCovModel, ContHetDispModel, Layer, TiledModel, HomogSoilLayer,
     SeasonalVegLayer, PrecipScattSoilLayer)

@@ -120,7 +120,7 @@ class SmallStepBasis(Basis):
             for pe in range(pb + 2, self.P):
                 intervals.append((pb, pe))
                 covectors.append(self._covector(pb, pe))
-                pt.append(self.pt(pb, pe))
+                pt.append(self._pt(pb, pe))
                 ptau.append(self._ptau(pb, pe))
         # sorting
         def lsort(x): return [x[ind] for ind in np.lexsort((pt, ptau))]
@@ -130,7 +130,7 @@ class SmallStepBasis(Basis):
         self.intervals = np.array(lsort(intervals))
 
     @staticmethod
-    def pt(pb, pe):
+    def _pt(pb, pe):
         return 0.5 * (pb + pe)
 
     @staticmethod
@@ -185,4 +185,21 @@ class TwoHopBasis(Basis):
         hminus, hplus = TwoHopBasis._h(ptau)
         return [(pt - hminus, pt, 1), (pt, pt + hplus, 1), (pt - hminus, pt + hplus, -1)]
 
-
+def clip_cclosures(p_range, basis, cclosures, axis=0):
+    # returns basis and cclosures array clipped to p_range of acquisitions
+    # axis: axis of cclosures spanning elements of closure basis
+    if p_range[0] > basis.P or p_range[1] > basis.P or p_range[0] <=0:
+        raise ValueError("Invalid p_range")
+    P_clip = p_range[1] - p_range[0]
+    basis_clip = type(basis)(P_clip)
+    ind_elements = []
+    for interval_clip in basis_clip.intervals:
+        interval = interval_clip + p_range[0]
+        matches = np.nonzero(
+            np.logical_and(basis.intervals[:, 0] == interval[0], basis.intervals[:, 1] == interval[1]))[0]
+        assert len(matches == 1)
+        ind_elements.append(matches[0])
+    sl = tuple([slice(dim) if jdim != axis else ind_elements for jdim, dim in enumerate(cclosures.shape)])
+    cclosures_clip = cclosures[sl]
+    return basis_clip, cclosures_clip
+    
