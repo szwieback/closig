@@ -188,7 +188,7 @@ class TwoHopBasis(Basis):
 def clip_cclosures(p_range, basis, cclosures, axis=0):
     # returns basis and cclosures array clipped to p_range of acquisitions
     # axis: axis of cclosures spanning elements of closure basis
-    if p_range[0] > basis.P or p_range[1] > basis.P or p_range[0] <=0:
+    if p_range[0] > basis.P or p_range[1] > basis.P or p_range[0] <0:
         raise ValueError("Invalid p_range")
     P_clip = p_range[1] - p_range[0]
     basis_clip = type(basis)(P_clip)

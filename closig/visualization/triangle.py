@@ -94,4 +94,6 @@ def triangle_plot(
         _cbar = plt.colorbar(im, ax=ax, cax=cax, ticks=[vabs, 0, -vabs])
         _cbar.solids.set_rasterized(True)
         _cbar.solids.set_edgecolor('face')
-    return ax
+        return ax, _cbar
+    else:
+        return ax
